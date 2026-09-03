@@ -71,7 +71,7 @@ const CURRICULUM_DEFINITION = {
           { name: '한국지리 탐구', category: '사회', units: 3 },
           { name: '사회문제 탐구', category: '사회', units: 3 },
           { name: '역학과 에너지', category: '과학', units: 3 },
-          { name: '화학반응의 세계', category: '과학', units: 3 },
+          { name: '화학 반응의 세계', category: '과학', units: 3 },
           { name: '세포와 물질대사', category: '과학', units: 3 },
           { name: '지구시스템과학', category: '과학', units: 3 },
           { name: '과학과제연구', category: '과학', units: 3 }
@@ -257,6 +257,7 @@ function cleanSubjectName(name) {
   if (str === '미적분II' || str === '미적분2') return '미적분Ⅱ';
   if (str === '스포츠생활1' || str === '스포츠 생활 1') return '스포츠 생활1';
   if (str === '스포츠생활2' || str === '스포츠 생활 2') return '스포츠 생활2';
+  if (str === '화학반응의 세계' || str === '화학반응의세계' || str === '화학 반응의세계') return '화학 반응의 세계';
   return str;
 }
 
@@ -419,15 +420,15 @@ function generateRealisticSampleData() {
       choices1.push(i % 2 === 0 ? '정보' : (i % 3 === 0 ? '일본어' : '한문'));
 
       // 2학기: 과학 집중 4~5개 + 택1
-      choices2 = ['역학과 에너지', '화학반응의 세계', '세포와 물질대사', '지구시스템과학', '과학과제연구', i % 2 === 0 ? '인공지능 기초' : '일본어 회화'];
+      choices2 = ['역학과 에너지', '화학 반응의 세계', '세포와 물질대사', '지구시스템과학', '과학과제연구', i % 2 === 0 ? '인공지능 기초' : '일본어 회화'];
     } else if (i <= 75) {
       // Natural Science (2~3 sciences + social) + 1 from 택1
       choices1 = ['물리학', '화학', '생명과학', '현대사회와 윤리', select1_2026_1[i % 4]];
-      choices2 = ['기하', '역학과 에너지', '화학반응의 세계', '세포와 물질대사', '한국지리 탐구', '인공지능 기초'];
+      choices2 = ['기하', '역학과 에너지', '화학 반응의 세계', '세포와 물질대사', '한국지리 탐구', '인공지능 기초'];
     } else if (i <= 125) {
       // Bio/Medical / Convergence Track
       choices1 = ['생명과학', '화학', '지구과학', '사회와 문화', select1_2026_1[(i + 1) % 4]];
-      choices2 = ['화학반응의 세계', '세포와 물질대사', '사회문제 탐구', '윤리와 사상', '과학과제연구', '중국 문화'];
+      choices2 = ['화학 반응의 세계', '세포와 물질대사', '사회문제 탐구', '윤리와 사상', '과학과제연구', '중국 문화'];
     } else if (i <= 170) {
       // Humanities / Social Science Track (4 socials + 1 from 택1)
       choices1 = ['사회와 문화', '현대사회와 윤리', '세계사', '세계시민과 지리', select1_2026_1[(i + 2) % 4]];
@@ -636,7 +637,7 @@ function loadDatasetIntoState(cohortKey, studentList) {
 // -------------------------------------------------------------
 // Science Focus Detection by Cohort
 // 1. 2026_2_1: 물리학, 화학, 생명과학, 지구과학 (4과목 올선택)
-// 2. 2026_2_2: 세포와 물질대사, 역학과 에너지, 지구시스템과학, 화학반응의 세계 (3과목 이상 선택)
+// 2. 2026_2_2: 세포와 물질대사, 역학과 에너지, 지구시스템과학, 화학 반응의 세계 (3과목 이상 선택)
 // 3. 2025_3_1: 물질과 에너지, 전자기와 양자, 생물의 유전, 행성우주과학 (3과목 이상 선택)
 // -------------------------------------------------------------
 function getScienceFocusInfo(cohortKey) {
@@ -666,7 +667,7 @@ function getScienceFocusInfo(cohortKey) {
       students: matched
     };
   } else if (cohortKey === '2026_2_2') {
-    const targetNames = ['세포와 물질대사', '역학과 에너지', '지구시스템과학', '화학반응의 세계'];
+    const targetNames = ['세포와 물질대사', '역학과 에너지', '지구시스템과학', '화학 반응의 세계'];
     const targetKeys = targetNames.map(normalizeSubjectKey);
     const matched = allStudents.filter(student => {
       const studentChoices = (student.choices || []).map(normalizeSubjectKey);
@@ -682,7 +683,7 @@ function getScienceFocusInfo(cohortKey) {
       cohortKey: '2026_2_2',
       title: '심화과학 3과목 이상 선택 현황',
       badge: '자연·이공계 집중 (3과목↑)',
-      desc: '2학년 2학기 <strong>세포와 물질대사, 역학과 에너지, 지구시스템과학, 화학반응의 세계</strong> 중 3과목 이상을 선택한 학생 현황입니다.',
+      desc: '2학년 2학기 <strong>세포와 물질대사, 역학과 에너지, 지구시스템과학, 화학 반응의 세계</strong> 중 3과목 이상을 선택한 학생 현황입니다.',
       btnText: '심화과학 3과목 이상 선택자 명단 확인',
       modalTitle: '2026 입학생 2학년 2학기 - 심화과학 3과목 이상 선택 학생 명단',
       subjects: targetNames,
@@ -2013,7 +2014,7 @@ function downloadExcelTemplate() {
   const h2026_2 = [
     '학년', '반', '번호', '이름',
     '독서와 작문', '미적분Ⅰ', '영어Ⅱ', '스포츠 생활2',
-    '언어생활 탐구', '기하', '영미 문학 읽기', '법과 사회', '윤리와 사상', '동아시아 역사 기행', '한국지리 탐구', '사회문제 탐구', '역학과 에너지', '화학반응의 세계', '세포와 물질대사', '지구시스템과학', '과학과제연구',
+    '언어생활 탐구', '기하', '영미 문학 읽기', '법과 사회', '윤리와 사상', '동아시아 역사 기행', '한국지리 탐구', '사회문제 탐구', '역학과 에너지', '화학 반응의 세계', '세포와 물질대사', '지구시스템과학', '과학과제연구',
     '중국 문화', '일본어 회화', '인공지능 기초', '언어생활과 한자'
   ];
   const r2026_2 = [2, 1, 1, '홍길동', 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0];
