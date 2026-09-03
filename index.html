@@ -31,22 +31,21 @@
           <i data-lucide="graduation-cap" style="width:28px; height:28px;"></i>
         </div>
         <div>
-          <h1 class="brand-title">정명고 2027학년도 과목 선택 결과 분석</h1>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <h1 class="brand-title">정명고 2027학년도 과목 선택 결과 분석</h1>
+            <span class="badge badge-purple" style="font-size:0.8rem; font-weight:700; padding:4px 10px; border-radius:12px;">제작: 정명고 오인석</span>
+          </div>
           <p class="brand-subtitle">2026학년도 1·2학년 학생 대상 2027학년도 수강신청 데이터 분석 시스템</p>
         </div>
       </div>
       
       <div class="header-actions">
-        <button class="btn btn-outline" id="btn-print" title="대시보드 인쇄 또는 PDF 저장">
-          <i data-lucide="printer" style="width:16px; height:16px;"></i>
-          인쇄 / PDF
+        <button class="btn btn-pastel-green btn-sm" id="btn-export-excel" title="정명고 공식 교육과정 엑셀 표준 양식 다운로드" style="padding:6px 14px; font-size:0.82rem;">
+          <i data-lucide="file-spreadsheet" style="width:14px; height:14px;"></i>
+          엑셀양식 다운로드
         </button>
-        <button class="btn btn-pastel-green" id="btn-export-excel" title="현재 탭 데이터 엑셀로 다운로드">
-          <i data-lucide="download" style="width:16px; height:16px;"></i>
-          엑셀 다운로드
-        </button>
-        <button class="btn btn-outline" id="btn-help-guide" title="사용 방법 및 구글시트 연동 안내">
-          <i data-lucide="help-circle" style="width:16px; height:16px;"></i>
+        <button class="btn btn-outline btn-sm" id="btn-help-guide" title="사용 방법 및 안내" style="padding:6px 14px; font-size:0.82rem;">
+          <i data-lucide="help-circle" style="width:14px; height:14px;"></i>
           도움말
         </button>
       </div>
@@ -112,7 +111,6 @@
       <button class="tab-btn active" data-tab="2026_2_1">
         <i data-lucide="calendar" style="width:16px; height:16px;"></i>
         2026 입학생 (2학년 1학기)
-        <span class="tab-badge badge-pink" id="tab-badge-sci4">물·화·생·지 집중</span>
       </button>
       <button class="tab-btn" data-tab="2026_2_2">
         <i data-lucide="calendar" style="width:16px; height:16px;"></i>
@@ -139,29 +137,6 @@
     <!-- TAB CONTENT: COHORT VIEW (2026 2-1, 2026 2-2, 2025 3-1, 2025 3-2) -->
     <main id="tab-view-cohort" class="tab-content-panel">
       
-      <!-- Special 4-Science Highlight Card (Visible prominently on 2026 2학년 1학기) -->
-      <section class="science4-highlight-card" id="sci4-banner" style="display: none;">
-        <div class="science4-content">
-          <div class="science4-info">
-            <h3>
-              <i data-lucide="atom" style="width:24px; height:24px; color:#E11D48;"></i>
-              2026 입학생 2학년 1학기 : '물리학·화학·생명과학·지구과학' 4과목 올선택 현황
-            </h3>
-            <p>자연·공학 계열 진로를 위해 4대 기초 과학 과목을 모두 수강 신청한 학생들의 통계 및 명단입니다.</p>
-          </div>
-          <div class="science4-stat-group">
-            <div class="science4-num-box">
-              <div class="science4-num" id="sci4-count">0명</div>
-              <div class="science4-rate" id="sci4-percent">전체 학생의 0.0%</div>
-            </div>
-            <button class="btn btn-pastel-pink" id="btn-view-sci4-students">
-              <i data-lucide="list-filter" style="width:16px; height:16px;"></i>
-              4과목 선택자 명단 확인
-            </button>
-          </div>
-        </div>
-      </section>
-
       <!-- KPI Summary Cards -->
       <section class="kpi-grid">
         <div class="kpi-card purple">
@@ -209,9 +184,9 @@
         </div>
       </section>
 
-      <!-- Charts Row -->
+      <!-- Charts Row (With 4-Science Box placed gracefully in the middle) -->
       <section class="charts-grid">
-        <!-- Top Subjects Bar Chart -->
+        <!-- 1. Top Subjects Bar Chart -->
         <div class="dashboard-card">
           <div class="card-header-row">
             <h2 class="card-title">
@@ -225,7 +200,31 @@
           </div>
         </div>
 
-        <!-- Subject Area Donut Chart -->
+        <!-- 2. 4-Science Calm Status Card (Placed in the middle, tone balanced) -->
+        <div class="dashboard-card sci4-middle-card" id="sci4-banner" style="display: none;">
+          <div class="card-header-row" style="margin-bottom: 12px;">
+            <h2 class="card-title" style="font-size: 0.98rem;">
+              <i data-lucide="atom" style="width:19px; height:19px; color:#E11D48;"></i>
+              물·화·생·지 4과목 올선택 현황
+            </h2>
+            <span class="badge badge-pink">자연·공학 집중</span>
+          </div>
+          <div class="sci4-middle-body">
+            <div class="sci4-num-wrap">
+              <div class="sci4-num" id="sci4-count">0명</div>
+              <div class="sci4-rate" id="sci4-percent">전체 학생의 0.0%</div>
+            </div>
+            <div class="sci4-desc-box">
+              2학년 1학기 <strong>선택 4과목</strong> 중 4대 기초 과학(물리학·화학·생명과학·지구과학)을 모두 수강 신청한 학생 현황입니다.
+            </div>
+            <button class="btn btn-pastel-pink btn-sm" id="btn-view-sci4-students" style="width: 100%; margin-top: 14px;">
+              <i data-lucide="list-filter" style="width:15px; height:15px;"></i>
+              4과목 선택자 명단 확인
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Subject Area Donut Chart -->
         <div class="dashboard-card">
           <div class="card-header-row">
             <h2 class="card-title">
@@ -287,14 +286,14 @@
             <thead>
               <tr>
                 <th style="width: 55px; text-align:center;">순위</th>
-                <th>교과 영역</th>
+                <th style="width: 95px;">교과 영역</th>
                 <th>과목명</th>
-                <th style="width: 120px;">이수 구분(선택군)</th>
-                <th style="width: 65px; text-align:center;">학점</th>
-                <th style="width: 95px; text-align:right;">선택 인원</th>
-                <th style="width: 160px;">선택률 (%)</th>
-                <th style="width: 120px; text-align:center;">예상 분반 수 (25명 기준)</th>
-                <th style="width: 95px; text-align:center;">개설 상태</th>
+                <th style="width: 130px;">이수 구분(선택군)</th>
+                <th style="width: 90px; text-align:center; white-space:nowrap;">학점</th>
+                <th style="width: 95px; text-align:right; white-space:nowrap;">선택 인원</th>
+                <th style="width: 125px; text-align:center; white-space:nowrap;">예상 분반 수 (25명 기준)</th>
+                <th style="width: 155px;">선택률 (%)</th>
+                <th style="width: 95px; text-align:center; white-space:nowrap;">개설 상태</th>
               </tr>
             </thead>
             <tbody id="subject-table-body">
@@ -595,6 +594,144 @@
     </div>
   </div>
 
+  <!-- MODAL: Custom Pastel Excel Upload Result Modal -->
+  <div class="modal-overlay" id="modal-upload-result">
+    <div class="modal-window" style="max-width: 640px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #ECFDF5, #F0FDF4); border-bottom: 1px solid #A7F3D0;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; background:#D1FAE5; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#059669; flex-shrink:0;">
+            <i data-lucide="check-circle-2" style="width:24px; height:24px;"></i>
+          </div>
+          <div>
+            <h3 style="color:#065F46; font-size:1.15rem; margin:0; font-weight:800;">엑셀 파일 분석 완료</h3>
+            <p style="font-size:0.83rem; color:#047857; margin-top:2px;" id="upload-result-filename">파일명.xlsx</p>
+          </div>
+        </div>
+        <button class="close-btn" data-close="modal-upload-result">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        
+        <!-- Summary KPI chips -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 20px;">
+          <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:0.8rem; color:#64748B; font-weight:600;">총 분석 학생 수</div>
+            <div style="font-size:1.65rem; font-weight:800; color:#4F46E5; margin-top:3px;" id="upload-result-student-count">0명</div>
+          </div>
+          <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:0.8rem; color:#64748B; font-weight:600;">성공적으로 인식된 시트</div>
+            <div style="font-size:1.65rem; font-weight:800; color:#059669; margin-top:3px;" id="upload-result-sheet-count">0개 시트</div>
+          </div>
+        </div>
+
+        <!-- Detected sheets list -->
+        <div style="font-size:0.88rem; font-weight:700; color:#1E293B; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+          <i data-lucide="layers" style="width:16px; height:16px; color:#6366F1;"></i>
+          시트별 지능형 자동 감지 내역
+        </div>
+        <div id="upload-result-sheet-list" style="display:flex; flex-direction:column; gap:10px; max-height: 240px; overflow-y:auto; padding-right:4px;">
+          <!-- Dynamically populated cards -->
+        </div>
+
+        <div style="margin-top:16px; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:10px 14px; display:flex; align-items:flex-start; gap:8px;">
+          <i data-lucide="info" style="width:16px; height:16px; color:#2563EB; flex-shrink:0; margin-top:2px;"></i>
+          <span style="font-size:0.82rem; color:#1E40AF; line-height:1.45;">
+            상단 탭(2학년 1학기, 2학기, 3학년 1학기, 2학기, 전문가 도구)을 클릭하시면 학기별 상세 결과 및 분반 시뮬레이션을 바로 확인하실 수 있습니다.
+          </span>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end;">
+        <button class="btn btn-primary" data-close="modal-upload-result" style="padding:9px 24px;">
+          <i data-lucide="check" style="width:16px; height:16px;"></i>
+          결과 대시보드 보기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Student Detail Modal (Matching Modern Pastel Design) -->
+  <div class="modal-overlay" id="modal-student-detail">
+    <div class="modal-window" style="max-width: 580px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #EEF2FF, #F5F3FF); border-bottom: 1px solid #E0E7FF;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; background:#E0E7FF; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#4F46E5; flex-shrink:0;">
+            <i data-lucide="user" style="width:22px; height:22px;"></i>
+          </div>
+          <div>
+            <h3 style="color:#1E1B4B; font-size:1.15rem; margin:0; font-weight:800;" id="modal-student-name-title">학생 과목 선택 상세 내역</h3>
+            <p style="font-size:0.83rem; color:#4338CA; margin-top:2px;" id="modal-student-cohort-subtitle">소속 학년 및 학기</p>
+          </div>
+        </div>
+        <button class="close-btn" data-close="modal-student-detail">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 24px;">
+        
+        <!-- Student Info Chip -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px 16px; margin-bottom:18px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.95rem; font-weight:800; color:#1E293B;" id="modal-student-info-text">2학년 1반 5번</span>
+            <span id="modal-student-nametag" class="badge badge-blue" style="display:none;">홍길동</span>
+          </div>
+          <span id="modal-student-audit-badge" class="badge badge-green">선택 완료</span>
+        </div>
+
+        <!-- Designated Subjects -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:0.86rem; font-weight:700; color:#475569; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="lock" style="width:14px; height:14px; color:#64748B;"></i>
+            학교 지정 과목 (<span id="modal-student-designated-count">0</span>과목)
+          </div>
+          <div id="modal-student-designated-list" style="display:flex; flex-wrap:wrap; gap:6px;">
+            <!-- Badges -->
+          </div>
+        </div>
+
+        <!-- Student Selected Subjects -->
+        <div style="margin-bottom:18px;">
+          <div style="font-size:0.86rem; font-weight:700; color:#475569; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="check-square" style="width:14px; height:14px; color:#6366F1;"></i>
+            학생 선택 과목 (<span id="modal-student-choices-count">0</span>과목)
+          </div>
+          <div id="modal-student-choices-list" style="display:flex; flex-wrap:wrap; gap:6px;">
+            <!-- Badges -->
+          </div>
+        </div>
+
+        <!-- Audit Diagnosis Note -->
+        <div id="modal-student-audit-box" style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:10px; padding:12px 14px; display:flex; align-items:flex-start; gap:8px;">
+          <i data-lucide="shield-check" style="width:16px; height:16px; color:#16A34A; flex-shrink:0; margin-top:2px;" id="modal-student-audit-icon"></i>
+          <span style="font-size:0.83rem; color:#15803D; line-height:1.45;" id="modal-student-audit-desc">
+            교육과정 편성 기준에 맞게 모든 선택군 규정을 완벽하게 충족하였습니다.
+          </span>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:flex-end;">
+        <button class="btn btn-outline" data-close="modal-student-detail" style="padding:7px 22px;">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Unified Pastel Alert / Notice Modal -->
+  <div class="modal-overlay" id="modal-alert">
+    <div class="modal-window" style="max-width: 440px; text-align:center;">
+      <div class="modal-body" style="padding: 28px 24px 20px;">
+        <div style="width:54px; height:54px; border-radius:16px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; background:#EEF2FF; color:#4F46E5;" id="modal-alert-icon-wrap">
+          <i data-lucide="info" style="width:28px; height:28px;" id="modal-alert-icon"></i>
+        </div>
+        <h3 style="font-size:1.15rem; font-weight:800; color:#1E293B; margin-bottom:8px;" id="modal-alert-title">알림</h3>
+        <p style="font-size:0.88rem; color:#64748B; line-height:1.5; margin-bottom:22px; white-space:pre-line;" id="modal-alert-message">
+          안내 메시지 내용입니다.
+        </p>
+        <button class="btn btn-primary" data-close="modal-alert" style="width:100%; padding:10px 0;">
+          확인
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL 3: Help & Google Sheet Guide Modal -->
   <div class="modal-overlay" id="modal-help">
     <div class="modal-window">
@@ -633,6 +770,18 @@
       </div>
     </div>
   </div>
+
+  <!-- Footer Credit -->
+  <footer style="margin-top: 48px; padding: 24px 0 36px; border-top: 1px solid var(--border-light); text-align: center; color: #94A3B8; font-size: 0.85rem;">
+    <div style="display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <span style="font-weight: 700; color: #64748B;">정명고등학교 2027학년도 과목 선택 분석 시스템</span>
+      <span>•</span>
+      <span class="badge badge-purple" style="font-weight: 700;">제작: 정명고 오인석</span>
+    </div>
+    <p style="margin-top: 6px; font-size: 0.8rem; color: #94A3B8;">
+      2026학년도 1·2학년 학생 대상 수강신청 데이터 분석 및 교육과정 편성·시간표 블록 설계 지원 도구
+    </p>
+  </footer>
 
   <!-- Main JavaScript Logic -->
   <script src="app.js"></script>

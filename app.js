@@ -369,6 +369,22 @@ function getSubjectMeta(subName, cohortKey = '') {
   return { category: '생활교양', type: '선택', units: 3, group: '선택 1과목', badge: '택1' };
 }
 
+// Priority for subject ordering in tables:
+// 1. 학교지정
+// 2. 선택 수가 많은 과목군 (택5 -> 택4 -> 택3...)
+// 3. 선택 1과목 (택1)
+// 4. 기타
+function getSubjectGroupPriority(sub) {
+  const g = String(sub.group || sub.badge || '').replace(/\s+/g, '');
+  if (sub.type === '지정' || g.includes('학교지정') || g.includes('지정')) return 1;
+  if (g.includes('선택5') || g.includes('택5')) return 2;
+  if (g.includes('선택4') || g.includes('택4')) return 3;
+  if (g.includes('선택3') || g.includes('택3')) return 4;
+  if (g.includes('선택2') || g.includes('택2')) return 5;
+  if (g.includes('선택1') || g.includes('택1')) return 6;
+  return 7;
+}
+
 // -------------------------------------------------------------
 // Sample Realistic Data Generator (Default State)
 // Accurately models Jeongmyeong High School Curriculum
@@ -592,8 +608,16 @@ function loadDatasetIntoState(cohortKey, studentList) {
     });
   });
 
-  // Convert map to sorted array (Sort: Choice subjects first by count desc, or all by count desc)
-  const subjectsArray = Object.values(subjectMap).sort((a, b) => b.count - a.count);
+  // Convert map to sorted array:
+  // Order: 1. 학교지정 -> 2. 선택 수가 많은 과목군 (택5, 택4) -> 3. 선택 1과목 (택1) -> 4. 기타
+  // Within same group: by count desc, then by name
+  const subjectsArray = Object.values(subjectMap).sort((a, b) => {
+    const pA = getSubjectGroupPriority(a);
+    const pB = getSubjectGroupPriority(b);
+    if (pA !== pB) return pA - pB;
+    if (b.count !== a.count) return b.count - a.count;
+    return a.name.localeCompare(b.name, 'ko');
+  });
   subjectsArray.forEach((sub, idx) => {
     sub.rank = idx + 1;
     sub.rate = totalStudents > 0 ? ((sub.count / totalStudents) * 100).toFixed(1) : '0.0';
@@ -690,18 +714,21 @@ function renderCohortView(cohortKey) {
   const subjects = cohort.subjects || [];
   const totalCount = students.length;
 
-  // 1. 4-Science Banner (Prominent on 2026 2학년 1학기)
+  // 1. 4-Science Calm Status Card (Positioned gracefully between charts on 2026 2-1)
   const sci4Banner = document.getElementById('sci4-banner');
+  const chartsGrid = document.querySelector('.charts-grid');
   const sci4Students = get4ScienceStudents(cohortKey);
   const sci4Count = sci4Students.length;
 
   if (cohortKey === '2026_2_1') {
-    sci4Banner.style.display = 'block';
+    if (sci4Banner) sci4Banner.style.display = 'flex';
+    if (chartsGrid) chartsGrid.classList.remove('hide-sci4');
     document.getElementById('sci4-count').textContent = `${sci4Count}명`;
     const sci4Rate = totalCount > 0 ? ((sci4Count / totalCount) * 100).toFixed(1) : '0.0';
-    document.getElementById('sci4-percent').textContent = `선택 4과목 중 과학 4과목 올선택 (전체의 ${sci4Rate}%)`;
+    document.getElementById('sci4-percent').textContent = `전체 학생의 ${sci4Rate}% (${sci4Count}명)`;
   } else {
-    sci4Banner.style.display = 'none';
+    if (sci4Banner) sci4Banner.style.display = 'none';
+    if (chartsGrid) chartsGrid.classList.add('hide-sci4');
   }
 
   // 2. KPI Summary Cards
@@ -897,8 +924,9 @@ function renderSubjectTable(subjects, totalCount) {
         ${isSci4 ? '<span class="badge badge-pink" style="margin-left:6px; font-size:0.7rem;">물·화·생·지</span>' : ''}
       </td>
       <td><span class="badge ${groupBadgeClass}">${sub.group || sub.badge || '학생선택'}</span></td>
-      <td style="text-align:center; font-weight:700; color:#4F46E5;">${sub.units || 3}학점</td>
-      <td style="text-align:right; font-weight:800; color:#0F172A; font-size:1rem;">${sub.count}명</td>
+      <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">${sub.units || 3}학점</td>
+      <td style="text-align:right; font-weight:800; color:#0F172A; font-size:1rem; white-space:nowrap;">${sub.count}명</td>
+      <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">${sections}개 분반</td>
       <td>
         <div class="progress-bar-wrap">
           <div class="progress-track">
@@ -907,8 +935,7 @@ function renderSubjectTable(subjects, totalCount) {
           <span style="font-size:0.82rem; font-weight:600; color:#64748B; width:45px; text-align:right;">${sub.rate}%</span>
         </div>
       </td>
-      <td style="text-align:center; font-weight:700; color:#4F46E5;">${sections}개 분반</td>
-      <td style="text-align:center;">${statusBadge}</td>
+      <td style="text-align:center; white-space:nowrap;">${statusBadge}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -1166,22 +1193,142 @@ function renderAllStudentsTable() {
       const num = btn.getAttribute('data-num');
       const student = students.find(s => s.ban === ban && s.num === num);
       if (student) {
-        alert(
-          `[학생 과목 선택 상세]\n\n` +
-          `• 소속: ${student.grade || '2'}학년 ${student.ban}반 ${student.num}번\n\n` +
-          `• 학교 지정 과목 (${(student.designated || []).length}과목):\n` +
-          `${(student.designated || []).map((c, i) => `  ${i + 1}. ${c}`).join('\n') || '  (없음)'}\n\n` +
-          `• 학생 선택 과목 (1로 표기된 총 ${student.choices.length}과목):\n` +
-          `${student.choices.map((c, i) => `  ${i + 1}. ${c}`).join('\n')}`
-        );
+        openStudentDetailModal(student, currentKey);
       }
     });
   });
 }
 
 // -------------------------------------------------------------
-// Modals Handling (Privacy Protected: Grade, Ban, Num)
+// Modals Handling (Unified Modern Pastel Aesthetics)
 // -------------------------------------------------------------
+
+// Open Student Detailed Selection Modal
+function openStudentDetailModal(student, cohortKey) {
+  const modal = document.getElementById('modal-student-detail');
+  if (!modal) return;
+
+  const cohortName = state.data[cohortKey]?.name || cohortKey;
+  document.getElementById('modal-student-cohort-subtitle').textContent = cohortName;
+
+  const infoText = `${student.grade || '2'}학년 ${student.ban}반 ${student.num}번`;
+  document.getElementById('modal-student-info-text').textContent = infoText;
+
+  const nameTag = document.getElementById('modal-student-nametag');
+  if (student.name) {
+    nameTag.style.display = 'inline-block';
+    nameTag.textContent = student.name;
+  } else {
+    nameTag.style.display = 'none';
+  }
+
+  // School Designated List
+  const designatedList = document.getElementById('modal-student-designated-list');
+  const desCount = document.getElementById('modal-student-designated-count');
+  designatedList.innerHTML = '';
+  const designated = student.designated || [];
+  desCount.textContent = designated.length;
+  if (designated.length > 0) {
+    designated.forEach(sub => {
+      const cur = getCurriculumSubject(cohortKey, sub);
+      const units = cur ? cur.units : 3;
+      const span = document.createElement('span');
+      span.className = 'badge badge-gray';
+      span.style.cssText = 'font-size:0.83rem; padding:6px 12px;';
+      span.textContent = `${sub} (${units}학점)`;
+      designatedList.appendChild(span);
+    });
+  } else {
+    designatedList.innerHTML = '<span style="color:#94A3B8; font-size:0.85rem;">학교 지정 과목 정보 없음</span>';
+  }
+
+  // Student Choice List
+  const choicesList = document.getElementById('modal-student-choices-list');
+  const choicesCount = document.getElementById('modal-student-choices-count');
+  choicesList.innerHTML = '';
+  const choices = student.choices || [];
+  choicesCount.textContent = choices.length;
+  if (choices.length > 0) {
+    choices.forEach(sub => {
+      const cur = getCurriculumSubject(cohortKey, sub);
+      const units = cur ? cur.units : 3;
+      const badgeType = cur ? (cur.badge || '선택') : '선택';
+      const span = document.createElement('span');
+      span.className = 'badge badge-purple';
+      span.style.cssText = 'font-size:0.83rem; padding:6px 12px;';
+      span.innerHTML = `<strong>${sub}</strong> <small style="opacity:0.85;">[${badgeType}, ${units}학점]</small>`;
+      choicesList.appendChild(span);
+    });
+  } else {
+    choicesList.innerHTML = '<span style="color:#EF4444; font-size:0.85rem;">선택된 과목이 없습니다.</span>';
+  }
+
+  // Audit Validation Check
+  const auditRes = auditStudentChoices(student, cohortKey);
+  const auditBadge = document.getElementById('modal-student-audit-badge');
+  const auditBox = document.getElementById('modal-student-audit-box');
+  const auditDesc = document.getElementById('modal-student-audit-desc');
+  const auditIcon = document.getElementById('modal-student-audit-icon');
+
+  if (auditRes.isValid) {
+    auditBadge.className = 'badge badge-green';
+    auditBadge.textContent = '선택 규정 충족';
+    auditBox.style.background = '#F0FDF4';
+    auditBox.style.borderColor = '#BBF7D0';
+    auditDesc.style.color = '#15803D';
+    auditDesc.textContent = '교육과정 편성 기준에 맞게 모든 선택군 규정을 완벽하게 충족하였습니다.';
+    if (auditIcon) auditIcon.setAttribute('data-lucide', 'shield-check');
+  } else {
+    auditBadge.className = 'badge badge-pink';
+    auditBadge.textContent = '선택 규정 불일치';
+    auditBox.style.background = '#FFF1F2';
+    auditBox.style.borderColor = '#FECDD3';
+    auditDesc.style.color = '#BE123C';
+    auditDesc.textContent = auditRes.reasons.join(' / ');
+    if (auditIcon) auditIcon.setAttribute('data-lucide', 'alert-triangle');
+  }
+
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+
+  modal.classList.add('active');
+}
+
+// Unified Pastel Alert / Notice Modal
+function showAlertModal(title, message, type = 'info') {
+  const modal = document.getElementById('modal-alert');
+  if (!modal) {
+    alert(message);
+    return;
+  }
+
+  document.getElementById('modal-alert-title').textContent = title;
+  document.getElementById('modal-alert-message').textContent = message;
+
+  const iconWrap = document.getElementById('modal-alert-icon-wrap');
+  const icon = document.getElementById('modal-alert-icon');
+
+  if (type === 'success') {
+    iconWrap.style.background = '#ECFDF5';
+    iconWrap.style.color = '#059669';
+    icon.setAttribute('data-lucide', 'check-circle-2');
+  } else if (type === 'error') {
+    iconWrap.style.background = '#FFF1F2';
+    iconWrap.style.color = '#E11D48';
+    icon.setAttribute('data-lucide', 'alert-triangle');
+  } else {
+    iconWrap.style.background = '#EEF2FF';
+    iconWrap.style.color = '#4F46E5';
+    icon.setAttribute('data-lucide', 'info');
+  }
+
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+
+  modal.classList.add('active');
+}
 function openSubjectStudentsModal(subjectName) {
   const currentKey = state.activeTab;
   const cohort = state.data[currentKey];
@@ -1270,12 +1417,12 @@ function exportCurrentTableToExcel() {
   const currentKey = state.activeTab;
   const cohort = state.data[currentKey];
   if (!cohort || !cohort.subjects) {
-    alert('내보낼 데이터가 없습니다.');
+    showAlertModal('데이터 없음', '내보낼 과목 선택 데이터가 없습니다.', 'error');
     return;
   }
 
   const exportData = [
-    ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '선택률(%)', '예상 분반 수 (25명 기준)', '주당 필요 시수']
+    ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '예상 분반 수 (25명 기준)', '선택률(%)', '주당 필요 시수']
   ];
 
   cohort.subjects.forEach((s, idx) => {
@@ -1287,8 +1434,8 @@ function exportCurrentTableToExcel() {
       s.group || s.type,
       s.units || 3,
       s.count,
-      s.rate + '%',
       sections,
+      s.rate + '%',
       sections * (s.units || 3)
     ]);
   });
@@ -1346,6 +1493,61 @@ function exportCoSelectionMatrixToExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '동시선택_상관분석');
   XLSX.writeFile(wb, '정명고_시간표편성_동시선택_상관분석.xlsx');
+}
+
+// -------------------------------------------------------------
+// Download Official Course Selection Excel Template
+// Generates standard 4-sheet template for teachers & students
+// -------------------------------------------------------------
+function downloadExcelTemplate() {
+  const wb = XLSX.utils.book_new();
+
+  // 1. 2026_2_1
+  const h2026_1 = [
+    '학년', '반', '번호', '이름',
+    '대수', '문학', '스포츠 생활1', '영어Ⅰ', '확률과 통계',
+    '사회와 문화', '현대사회와 윤리', '세계사', '세계시민과 지리', '물리학', '화학', '생명과학', '지구과학',
+    '중국어', '일본어', '정보', '한문'
+  ];
+  const r2026_1 = [2, 1, 1, '홍길동', 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0];
+  const ws1 = XLSX.utils.aoa_to_sheet([h2026_1, r2026_1]);
+  XLSX.utils.book_append_sheet(wb, ws1, '2026입학생 2학년 1학기');
+
+  // 2. 2026_2_2
+  const h2026_2 = [
+    '학년', '반', '번호', '이름',
+    '독서와 작문', '미적분Ⅰ', '영어Ⅱ', '스포츠 생활2',
+    '언어생활 탐구', '기하', '영미 문학 읽기', '법과 사회', '윤리와 사상', '동아시아 역사 기행', '한국지리 탐구', '사회문제 탐구', '역학과 에너지', '화학반응의 세계', '세포와 물질대사', '지구시스템과학', '과학과제연구',
+    '중국 문화', '일본어 회화', '인공지능 기초', '언어생활과 한자'
+  ];
+  const r2026_2 = [2, 1, 1, '홍길동', 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0];
+  const ws2 = XLSX.utils.aoa_to_sheet([h2026_2, r2026_2]);
+  XLSX.utils.book_append_sheet(wb, ws2, '2026입학생 2학년 2학기');
+
+  // 3. 2025_3_1
+  const h2025_1 = [
+    '학년', '반', '번호', '이름',
+    '화법과 언어', '영어 독해와 작문', '스포츠 과학', '음악감상과 비평',
+    '미적분Ⅱ', '경제수학',
+    '문학과 영상', '인공지능 수학', '심화영어', '국제 관계의 이해', '인문학과 윤리', '도시의 미래 탐구', '기후변화와 지속가능한 세계', '전자기와 양자', '물질과 에너지', '생물의 유전', '행성우주과학',
+    '인간과 심리', '심화 일본어', '데이터 과학', '생활과 한문'
+  ];
+  const r2025_1 = [3, 1, 1, '김철수', 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0];
+  const ws3 = XLSX.utils.aoa_to_sheet([h2025_1, r2025_1]);
+  XLSX.utils.book_append_sheet(wb, ws3, '2025입학생 3학년 1학기');
+
+  // 4. 2025_3_2
+  const h2025_2 = [
+    '학년', '반', '번호', '이름',
+    '독서 토론과 글쓰기', '심화 영어 독해와 작문', '스포츠 문화', '미술감상과 비평', '융합사고 수학',
+    '주제 탐구 독서', '수학과 문화', '미디어 영어', '여행지리', '윤리문제 탐구', '금융과 경제생활', '역사로 탐구하는 현대 세계', '과학의 역사와 문화', '기후변화와 환경생태', '융합과학 탐구',
+    '중국 언어와 역사의 이해1', '일본 문화', '소프트웨어와 생활', '한문고전읽기'
+  ];
+  const r2025_2 = [3, 1, 1, '김철수', 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0];
+  const ws4 = XLSX.utils.aoa_to_sheet([h2025_2, r2025_2]);
+  XLSX.utils.book_append_sheet(wb, ws4, '2025입학생 3학년 2학기');
+
+  XLSX.writeFile(wb, '정명고_2027학년도_과목선택_조사양식_표준서식.xlsx');
 }
 
 // -------------------------------------------------------------
@@ -1606,7 +1808,7 @@ function handleFileUpload(file) {
       const workbook = XLSX.read(data, { type: 'array' });
 
       let loadedCount = 0;
-      let matchedSheets = [];
+      let sheetResults = [];
 
       workbook.SheetNames.forEach((sheetName, sheetIndex) => {
         const worksheet = workbook.Sheets[sheetName];
@@ -1619,11 +1821,13 @@ function handleFileUpload(file) {
           loadDatasetIntoState(result.cohortKey, result.students);
           loadedCount += result.students.length;
           const cohortTitle = state.data[result.cohortKey]?.name || result.cohortKey;
-          const meta = result.metaInfo;
-          let locationDesc = `과목 행: ${meta.subjectRowNumber}행, 반/번호: ${meta.banColLetter}열/${meta.numColLetter}열`;
-          if (meta.nameColLetter !== '-') locationDesc += `, 이름: ${meta.nameColLetter}열`;
-
-          matchedSheets.push(`• [시트${sheetIndex + 1}] "${sheetName}" → ${cohortTitle}\n   (학생 ${result.students.length}명, 과목 ${result.subjectCount}개 감지 | ${locationDesc})`);
+          sheetResults.push({
+            sheetName: sheetName,
+            cohortTitle: cohortTitle,
+            studentCount: result.students.length,
+            subjectCount: result.subjectCount,
+            meta: result.metaInfo
+          });
         }
       });
 
@@ -1637,24 +1841,75 @@ function handleFileUpload(file) {
           const fn = document.getElementById('uploaded-filename');
           if (fn) fn.textContent = file.name;
           const sc = document.getElementById('uploaded-sheet-count');
-          if (sc) sc.textContent = `${matchedSheets.length}개 시트 자동 감지 완료`;
+          if (sc) sc.textContent = `${sheetResults.length}개 시트 자동 감지 완료`;
           const ts = document.getElementById('uploaded-total-students');
           if (ts) ts.textContent = `총 ${loadedCount}명 파싱`;
         }
 
         renderDashboard();
-        alert(`엑셀 파일 분석이 완료되었습니다!\n\n파일명: ${file.name}\n총 분석된 학생 수: ${loadedCount}명\n\n[시트별 지능형 자동 감지 결과]\n${matchedSheets.join('\n')}`);
+        showUploadResultModal(file.name, loadedCount, sheetResults);
       } else {
-        alert('엑셀 파일에서 개별 과목 선택 데이터를 감지하지 못했습니다.\n\n시트의 상단 행에 과목명(물리학, 화학, 대수, 문학 등)이 있는지 확인해주세요.');
+        showAlertModal('과목 데이터 미감지', '엑셀 파일에서 개별 과목 선택 데이터를 감지하지 못했습니다.\n\n시트의 상단 행에 과목명(물리학, 화학, 대수, 문학 등)이 있는지 확인해주세요.', 'error');
       }
 
     } catch (err) {
       console.error('File parsing error:', err);
-      alert('파일을 분석하는 중 오류가 발생했습니다: ' + err.message);
+      showAlertModal('파일 분석 오류', '파일을 분석하는 중 오류가 발생했습니다:\n' + err.message, 'error');
     }
   };
 
   reader.readAsArrayBuffer(file);
+}
+
+// -------------------------------------------------------------
+// Custom Pastel Upload Result Modal
+// -------------------------------------------------------------
+function showUploadResultModal(fileName, loadedCount, sheetResults) {
+  const modal = document.getElementById('modal-upload-result');
+  if (!modal) return;
+
+  const fn = document.getElementById('upload-result-filename');
+  if (fn) fn.textContent = fileName;
+  const sc = document.getElementById('upload-result-student-count');
+  if (sc) sc.textContent = `${loadedCount}명`;
+  const shc = document.getElementById('upload-result-sheet-count');
+  if (shc) shc.textContent = `${sheetResults.length}개 시트`;
+
+  const listContainer = document.getElementById('upload-result-sheet-list');
+  if (listContainer) {
+    listContainer.innerHTML = '';
+    sheetResults.forEach(item => {
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:12px 16px; box-shadow:0 1px 3px rgba(0,0,0,0.03);';
+
+      let locationPills = `<span class="badge badge-gray" style="font-size:0.75rem;">과목 행: ${item.meta.subjectRowNumber}행</span> <span class="badge badge-gray" style="font-size:0.75rem;">반/번호: ${item.meta.banColLetter}열/${item.meta.numColLetter}열</span>`;
+      if (item.meta.nameColLetter && item.meta.nameColLetter !== '-') {
+        locationPills += ` <span class="badge badge-blue" style="font-size:0.75rem;">이름: ${item.meta.nameColLetter}열</span>`;
+      }
+
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <strong style="color:#1E293B; font-size:0.92rem;">${item.sheetName}</strong>
+          <span class="badge badge-purple">${item.cohortTitle}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px;">
+          <span style="font-size:0.84rem; color:#475569;">
+            학생 <strong>${item.studentCount}명</strong> · 감지 과목 <strong>${item.subjectCount}개</strong>
+          </span>
+          <div style="display:flex; gap:4px; flex-wrap:wrap;">
+            ${locationPills}
+          </div>
+        </div>
+      `;
+      listContainer.appendChild(card);
+    });
+  }
+
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+
+  modal.classList.add('active');
 }
 
 // -------------------------------------------------------------
@@ -1753,7 +2008,7 @@ function setupEventListeners() {
       const fileInput = document.getElementById('file-input');
       if (fileInput) fileInput.value = '';
       renderDashboard();
-      alert('정명고 공식 교육과정 기준 샘플 데이터로 복원되었습니다.');
+      showAlertModal('샘플 데이터 복원 완료', '정명고 공식 교육과정 기준 샘플 데이터(355명)로 복원되었습니다.', 'success');
     });
   }
 
@@ -1806,7 +2061,7 @@ function setupEventListeners() {
   }
 
   // 10. Export Buttons
-  document.getElementById('btn-export-excel')?.addEventListener('click', exportCurrentTableToExcel);
+  document.getElementById('btn-export-excel')?.addEventListener('click', downloadExcelTemplate);
   document.getElementById('btn-export-sci4-excel')?.addEventListener('click', export4ScienceListToExcel);
   document.getElementById('btn-export-matrix')?.addEventListener('click', exportCoSelectionMatrixToExcel);
 

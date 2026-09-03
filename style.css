@@ -451,75 +451,79 @@ body {
   font-weight: 500;
 }
 
-/* 4-Science Highlight Banner / Card */
-.science4-highlight-card {
-  background: linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 40%, #FEE2E2 100%);
-  border: 1px solid #FECDD3;
-  border-radius: var(--radius-lg);
-  padding: 24px 28px;
-  margin-bottom: 28px;
-  box-shadow: var(--shadow-md);
-  position: relative;
-  overflow: hidden;
-}
-
-.science4-content {
+/* 4-Science Calm Status Card (Placed Between Charts) */
+.sci4-middle-card {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
+  border-left: 4px solid #FDA4AF;
 }
 
-.science4-info h3 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #9F1239;
+.sci4-middle-body {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
 }
 
-.science4-info p {
-  font-size: 0.9rem;
+.sci4-num-wrap {
+  text-align: center;
+  padding: 10px 0 6px;
+}
+
+.sci4-num {
+  font-size: 2.3rem;
+  font-weight: 900;
+  color: #E11D48;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.sci4-rate {
+  font-size: 0.88rem;
+  font-weight: 700;
   color: #BE123C;
   margin-top: 4px;
 }
 
-.science4-stat-group {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.science4-num-box {
-  text-align: right;
-}
-
-.science4-num {
-  font-size: 2.2rem;
-  font-weight: 900;
-  color: #E11D48;
-  line-height: 1;
-}
-
-.science4-rate {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: #BE123C;
+.sci4-desc-box {
+  font-size: 0.82rem;
+  color: #64748B;
+  background: #FFF1F2;
+  border: 1px solid #FFE4E6;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  line-height: 1.45;
+  margin-top: 8px;
 }
 
 /* Charts & Section Grid */
 .charts-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 22px;
+  grid-template-columns: 1.25fr 0.95fr 1fr;
+  gap: 20px;
   margin-bottom: 28px;
 }
 
-@media (max-width: 1024px) {
+.charts-grid.hide-sci4 {
+  grid-template-columns: 1.6fr 1fr;
+}
+
+@media (max-width: 1100px) {
   .charts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sci4-middle-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .charts-grid, .charts-grid.hide-sci4 {
     grid-template-columns: 1fr;
+  }
+  .sci4-middle-card {
+    grid-column: span 1;
   }
 }
 
