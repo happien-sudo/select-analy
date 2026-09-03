@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>정명고 2027학년도 과목 선택 결과 분석 대시보드</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+  
+  <!-- Pretendard Font & Styles -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- SheetJS (xlsx) for reading and exporting spreadsheets -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <!-- Chart.js for beautiful pastel charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-icon">
+          <i data-lucide="graduation-cap" style="width:28px; height:28px;"></i>
+        </div>
+        <div>
+          <h1 class="brand-title">정명고 2027학년도 과목 선택 결과 분석</h1>
+          <p class="brand-subtitle">2026학년도 1·2학년 학생 대상 2027학년도 수강신청 데이터 분석 시스템</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button class="btn btn-outline" id="btn-print" title="대시보드 인쇄 또는 PDF 저장">
+          <i data-lucide="printer" style="width:16px; height:16px;"></i>
+          인쇄 / PDF
+        </button>
+        <button class="btn btn-pastel-green" id="btn-export-excel" title="현재 탭 데이터 엑셀로 다운로드">
+          <i data-lucide="download" style="width:16px; height:16px;"></i>
+          엑셀 다운로드
+        </button>
+        <button class="btn btn-outline" id="btn-help-guide" title="사용 방법 및 구글시트 연동 안내">
+          <i data-lucide="help-circle" style="width:16px; height:16px;"></i>
+          도움말
+        </button>
+      </div>
+    </header>
+
+    <!-- Excel File Upload & Data Source Hub -->
+    <section class="datasource-card">
+      <div class="datasource-top">
+        <div class="datasource-status">
+          <span class="status-dot" id="status-indicator"></span>
+          <span id="status-text" style="font-weight:700; color:#1E293B;">분석 데이터: 기본 샘플 데이터 (355명)</span>
+          <span id="data-meta-badge" class="badge badge-purple" style="margin-left:6px;">데모 모드</span>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn btn-outline btn-sm" id="btn-load-sample" title="샘플 데이터 다시 불러오기" style="padding:6px 14px; font-size:0.82rem;">
+            <i data-lucide="rotate-ccw" style="width:14px; height:14px;"></i>
+            샘플 데이터 복원
+          </button>
+        </div>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-content">
+          <div class="drop-zone-icon">
+            <i data-lucide="file-spreadsheet" style="width:32px; height:32px; color:#10B981;"></i>
+          </div>
+          <div class="drop-zone-texts">
+            <h3 style="font-size:1.02rem; font-weight:700; color:#1E293B;">
+              과목 선택 엑셀(.xlsx, .xls, .csv) 파일을 이곳에 끌어다 놓으세요
+            </h3>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:3px;">
+              구글 스프레드시트에서 <strong>[파일] → [다운로드] → [Microsoft Excel(.xlsx)]</strong>로 저장한 파일을 업로드하시면 모든 시트를 자동으로 분석합니다.
+            </p>
+          </div>
+          <button class="btn btn-primary" type="button" id="btn-browse-file" style="margin-left:auto;">
+            <i data-lucide="upload" style="width:16px; height:16px;"></i>
+            엑셀 파일 찾아보기
+          </button>
+          <input type="file" id="file-input" accept=".xlsx, .xls, .csv" style="display:none;">
+        </div>
+      </div>
+
+      <!-- Uploaded File Info Summary Bar (hidden until file uploaded) -->
+      <div id="upload-summary-bar" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:var(--radius-sm); padding:10px 16px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <i data-lucide="check-circle" style="width:18px; height:18px; color:#16A34A;"></i>
+          <span style="font-size:0.88rem; font-weight:700; color:#15803D;" id="uploaded-filename">파일명.xlsx</span>
+          <span class="badge badge-green" id="uploaded-sheet-count">0개 시트</span>
+          <span class="badge badge-purple" id="uploaded-total-students">총 0명</span>
+        </div>
+        <button class="btn btn-outline btn-sm" id="btn-reupload" style="padding:4px 10px; font-size:0.8rem;">
+          <i data-lucide="refresh-cw" style="width:12px; height:12px;"></i>
+          다른 파일 올리기
+        </button>
+      </div>
+    </section>
+
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" id="cohort-tabs">
+      <button class="tab-btn active" data-tab="2026_2_1">
+        <i data-lucide="calendar" style="width:16px; height:16px;"></i>
+        2026 입학생 (2학년 1학기)
+        <span class="tab-badge badge-pink" id="tab-badge-sci4">물·화·생·지 집중</span>
+      </button>
+      <button class="tab-btn" data-tab="2026_2_2">
+        <i data-lucide="calendar" style="width:16px; height:16px;"></i>
+        2026 입학생 (2학년 2학기)
+      </button>
+      <button class="tab-btn" data-tab="2025_3_1">
+        <i data-lucide="award" style="width:16px; height:16px;"></i>
+        2025 입학생 (3학년 1학기)
+      </button>
+      <button class="tab-btn" data-tab="2025_3_2">
+        <i data-lucide="award" style="width:16px; height:16px;"></i>
+        2025 입학생 (3학년 2학기)
+      </button>
+      <button class="tab-btn" data-tab="expert_tools">
+        <i data-lucide="cpu" style="width:16px; height:16px;"></i>
+        전문가 도구 (분반·시간표 분석)
+      </button>
+      <button class="tab-btn" data-tab="student_search">
+        <i data-lucide="users" style="width:16px; height:16px;"></i>
+        학생별 선택 & 오류 검증
+      </button>
+    </nav>
+
+    <!-- TAB CONTENT: COHORT VIEW (2026 2-1, 2026 2-2, 2025 3-1, 2025 3-2) -->
+    <main id="tab-view-cohort" class="tab-content-panel">
+      
+      <!-- Special 4-Science Highlight Card (Visible prominently on 2026 2학년 1학기) -->
+      <section class="science4-highlight-card" id="sci4-banner" style="display: none;">
+        <div class="science4-content">
+          <div class="science4-info">
+            <h3>
+              <i data-lucide="atom" style="width:24px; height:24px; color:#E11D48;"></i>
+              2026 입학생 2학년 1학기 : '물리학·화학·생명과학·지구과학' 4과목 올선택 현황
+            </h3>
+            <p>자연·공학 계열 진로를 위해 4대 기초 과학 과목을 모두 수강 신청한 학생들의 통계 및 명단입니다.</p>
+          </div>
+          <div class="science4-stat-group">
+            <div class="science4-num-box">
+              <div class="science4-num" id="sci4-count">0명</div>
+              <div class="science4-rate" id="sci4-percent">전체 학생의 0.0%</div>
+            </div>
+            <button class="btn btn-pastel-pink" id="btn-view-sci4-students">
+              <i data-lucide="list-filter" style="width:16px; height:16px;"></i>
+              4과목 선택자 명단 확인
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- KPI Summary Cards -->
+      <section class="kpi-grid">
+        <div class="kpi-card purple">
+          <div class="kpi-top">
+            <span class="kpi-label">선택 참여 학생 수</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-purple); color:var(--pastel-purple-text);">
+              <i data-lucide="user-check" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-total-students">0명</div>
+          <div class="kpi-desc">해당 학기 수강 신청 총원</div>
+        </div>
+
+        <div class="kpi-card blue">
+          <div class="kpi-top">
+            <span class="kpi-label">개설 신청 과목 수</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-blue); color:var(--pastel-blue-text);">
+              <i data-lucide="book-open" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-total-subjects">0개</div>
+          <div class="kpi-desc">학생 선택 및 학교 지정 과목</div>
+        </div>
+
+        <div class="kpi-card green">
+          <div class="kpi-top">
+            <span class="kpi-label">1인당 평균 선택 수</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-green); color:var(--pastel-green-text);">
+              <i data-lucide="check-square" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-avg-choices">5.0개</div>
+          <div class="kpi-desc">선택군 기준 정상 선택 여부</div>
+        </div>
+
+        <div class="kpi-card amber">
+          <div class="kpi-top">
+            <span class="kpi-label">소인수 / 폐강 위기 과목</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-amber); color:var(--pastel-amber-text);">
+              <i data-lucide="alert-triangle" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="kpi-low-enrollment">0개</div>
+          <div class="kpi-desc">15명 미만 신청 과목</div>
+        </div>
+      </section>
+
+      <!-- Charts Row -->
+      <section class="charts-grid">
+        <!-- Top Subjects Bar Chart -->
+        <div class="dashboard-card">
+          <div class="card-header-row">
+            <h2 class="card-title">
+              <i data-lucide="bar-chart-2" style="width:20px; height:20px; color:#6366F1;"></i>
+              과목별 선택 인원 순위 (Top 12)
+            </h2>
+            <span class="badge badge-purple" id="chart-top-count-badge">상위 과목</span>
+          </div>
+          <div style="height: 320px; position: relative;">
+            <canvas id="subjectBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Subject Area Donut Chart -->
+        <div class="dashboard-card">
+          <div class="card-header-row">
+            <h2 class="card-title">
+              <i data-lucide="pie-chart" style="width:20px; height:20px; color:#38BDF8;"></i>
+              교과 영역별 선택 비중
+            </h2>
+            <span class="badge badge-blue">영역 분포</span>
+          </div>
+          <div style="height: 320px; position: relative; display:flex; align-items:center; justify-content:center;">
+            <canvas id="categoryDonutChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Subject Breakdown Table -->
+      <section class="dashboard-card">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">
+              <i data-lucide="table" style="width:20px; height:20px; color:#10B981;"></i>
+              과목별 상세 선택 결과 및 예상 분반 현황
+            </h2>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
+              과목명을 클릭하면 해당 과목을 선택한 학생 명단을 확인할 수 있습니다.
+            </p>
+          </div>
+          <div class="pill-group">
+            <span class="badge badge-gray" id="table-row-count">총 0개 과목</span>
+          </div>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="filter-bar">
+          <div class="pill-group" id="category-filters">
+            <button class="pill-btn active" data-cat="all">전체 교과</button>
+            <button class="pill-btn" data-cat="기초">기초(국·수·영)</button>
+            <button class="pill-btn" data-cat="사회">탐구(사회)</button>
+            <button class="pill-btn" data-cat="과학">탐구(과학)</button>
+            <button class="pill-btn" data-cat="생활교양">생활·교양</button>
+            <button class="pill-btn" data-cat="예체능">체육·예술</button>
+          </div>
+
+          <div style="display:flex; gap:10px; align-items:center;">
+            <div class="pill-group" id="type-filters">
+              <button class="pill-btn active" data-type="all">전체 구분</button>
+              <button class="pill-btn" data-type="선택">학생선택</button>
+              <button class="pill-btn" data-type="지정">학교지정</button>
+            </div>
+            <div class="search-box">
+              <i data-lucide="search" style="width:15px; height:15px; color:#94A3B8;"></i>
+              <input type="text" id="subject-search-input" placeholder="과목명 검색...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="table-container">
+          <table class="data-table" id="subject-table">
+            <thead>
+              <tr>
+                <th style="width: 55px; text-align:center;">순위</th>
+                <th>교과 영역</th>
+                <th>과목명</th>
+                <th style="width: 120px;">이수 구분(선택군)</th>
+                <th style="width: 65px; text-align:center;">학점</th>
+                <th style="width: 95px; text-align:right;">선택 인원</th>
+                <th style="width: 160px;">선택률 (%)</th>
+                <th style="width: 120px; text-align:center;">예상 분반 수 (25명 기준)</th>
+                <th style="width: 95px; text-align:center;">개설 상태</th>
+              </tr>
+            </thead>
+            <tbody id="subject-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- TAB CONTENT: EXPERT TOOLS -->
+    <main id="tab-view-expert" class="tab-content-panel" style="display:none;">
+      
+      <!-- Section Simulator Controls -->
+      <section class="dashboard-card" style="margin-bottom: 24px;">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">
+              <i data-lucide="sliders" style="width:20px; height:20px; color:#6366F1;"></i>
+              학급당 정원 기준 분반 산출 시뮬레이터
+            </h2>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
+              학급당 기준 인원을 조절하여 과목별 필요 분반 수와 교원 시수 필요량을 실시간으로 시뮬레이션합니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="simulator-control-panel">
+          <div class="slider-container">
+            <span style="font-size:0.9rem; font-weight:700; color:#334155;">분반 기준 인원:</span>
+            <input type="range" min="15" max="35" value="25" step="1" id="sim-class-size-slider" class="custom-slider">
+            <span class="slider-val-badge" id="sim-slider-val">25명 기준</span>
+          </div>
+
+          <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <div class="badge badge-purple" style="font-size:0.9rem; padding:8px 16px;">
+              총 예상 분반 수: <strong id="sim-total-sections" style="margin-left:6px; font-size:1.1rem;">0개 반</strong>
+            </div>
+            <div class="badge badge-blue" style="font-size:0.9rem; padding:8px 16px;">
+              총 필요 시수(주당): <strong id="sim-total-hours" style="margin-left:6px; font-size:1.1rem;">0시간</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulator Result Table -->
+        <div class="table-container">
+          <table class="data-table" id="sim-table">
+            <thead>
+              <tr>
+                <th>교과 영역</th>
+                <th>과목명</th>
+                <th style="width: 110px;">이수 구분</th>
+                <th style="text-align:right;">선택 인원</th>
+                <th style="text-align:center;">예상 분반 수</th>
+                <th style="text-align:center;">분반당 평균 인원</th>
+                <th style="text-align:center;">학점</th>
+                <th style="text-align:center;">필요 주당 시수 (분반 × 학점)</th>
+                <th>개설 진단</th>
+              </tr>
+            </thead>
+            <tbody id="sim-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Timetable Co-occurrence / Conflict Matrix -->
+      <section class="dashboard-card" style="margin-bottom: 24px;">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">
+              <i data-lucide="git-merge" style="width:20px; height:20px; color:#FB7185;"></i>
+              시간표 편성용 과목 간 동시선택 상관관계 분석 (상위 조합 Top 15)
+            </h2>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
+              학생들이 동시에 가장 많이 선택한 과목 조합입니다. 동시 선택자 수가 많은 두 과목은 <strong>동일한 교시에 분반을 묶으면 시간표 충돌이 발생</strong>하므로 서로 다른 군(블록)에 배치해야 합니다.
+            </p>
+          </div>
+          <button class="btn btn-outline" id="btn-export-matrix">
+            <i data-lucide="download" style="width:14px; height:14px;"></i>
+            조합 데이터 다운로드
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:60px; text-align:center;">순위</th>
+                <th>과목 A</th>
+                <th>과목 B</th>
+                <th style="text-align:right;">동시 선택 학생수</th>
+                <th style="width: 200px;">동시 선택 비율 (전체 학생 대비)</th>
+                <th>시간표 배치 권고사항</th>
+              </tr>
+            </thead>
+            <tbody id="co-selection-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Low Enrollment / Joint Curriculum Alert -->
+      <section class="dashboard-card">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">
+              <i data-lucide="shield-alert" style="width:20px; height:20px; color:#F59E0B;"></i>
+              소인수 과목 & 폐강 위기 대책 분석
+            </h2>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
+              수강 신청 인원이 15명 미만인 소인수 과목 목록 및 교육과정 대응 방안(공동교육과정, 분반 합반 등)입니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>과목명</th>
+                <th>교과 영역</th>
+                <th style="text-align:right;">선택 인원</th>
+                <th>진단 구분</th>
+                <th>교육과정 운영 권고 방안</th>
+              </tr>
+            </thead>
+            <tbody id="low-enrollment-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- TAB CONTENT: STUDENT SEARCH & AUDIT -->
+    <main id="tab-view-students" class="tab-content-panel" style="display:none;">
+      
+      <!-- Selection Validation Alert Box -->
+      <section class="dashboard-card" style="margin-bottom: 24px;">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">
+              <i data-lucide="check-circle-2" style="width:20px; height:20px; color:#10B981;"></i>
+              수강신청 유효성 검사 (규정 선택 수 오류 감지)
+            </h2>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
+              과목 선택 규정(예: 택5인데 4개만 선택했거나 6개 선택한 학생)을 충족하지 못한 이상 학생을 자동으로 탐지합니다.
+            </p>
+          </div>
+          <span class="badge badge-amber" id="audit-error-badge">이상 학생 0명</span>
+        </div>
+
+        <div class="table-container" style="max-height: 280px;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:60px; text-align:center;">학년</th>
+                <th style="width:60px; text-align:center;">반</th>
+                <th style="width:60px; text-align:center;">번호</th>
+                <th>소속 학년/학기</th>
+                <th style="width:110px; text-align:center;">선택 과목 수</th>
+                <th>선택한 과목 목록</th>
+                <th>오류 사유</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Student Roster & Choices Search -->
+      <section class="dashboard-card">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">
+              <i data-lucide="search" style="width:20px; height:20px; color:#6366F1;"></i>
+              학생별 전 과목 수강신청 조회
+            </h2>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
+              반 또는 번호로 검색하여 학생이 선택한 전체 과목 내역(1로 표기된 과목)을 조회합니다.
+            </p>
+          </div>
+          
+          <div class="search-box" style="width: 260px;">
+            <i data-lucide="search" style="width:16px; height:16px; color:#94A3B8;"></i>
+            <input type="text" id="student-search-input" placeholder="반 또는 번호 검색 (예: 1반, 12번)..." style="width: 100%;">
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="all-students-table">
+            <thead>
+              <tr>
+                <th style="width:60px; text-align:center;">학년</th>
+                <th style="width:70px; text-align:center;">반</th>
+                <th style="width:70px; text-align:center;">번호</th>
+                <th style="width:120px;">학년/학기</th>
+                <th>선택 과목 목록 (1로 표시된 과목)</th>
+                <th style="width:110px; text-align:center;">선택 과목 수</th>
+                <th style="width:130px; text-align:center;">물·화·생·지 여부</th>
+                <th style="width:90px; text-align:center;">상세</th>
+              </tr>
+            </thead>
+            <tbody id="all-students-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- MODAL 1: 4-Science Students Full Modal -->
+  <div class="modal-overlay" id="modal-sci4">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; background:var(--pastel-pink); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#BE123C;">
+            <i data-lucide="atom" style="width:20px; height:20px;"></i>
+          </div>
+          <h3 id="modal-sci4-title">물리학·화학·생명과학·지구과학 4과목 올선택자 명단</h3>
+        </div>
+        <button class="close-btn" data-close="modal-sci4">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <p style="font-size:0.88rem; color:#475569;">
+            해당 학생들은 4대 과학탐구 과목을 모두 1로 선택한 자연·이공계 집중 학생들입니다. (개인정보 보호를 위해 반/번호로 표시)
+          </p>
+          <button class="btn btn-pastel-green btn-sm" id="btn-export-sci4-excel">
+            <i data-lucide="download" style="width:14px; height:14px;"></i>
+            명단 엑셀 다운로드
+          </button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:60px; text-align:center;">No</th>
+                <th style="width:70px; text-align:center;">학년</th>
+                <th style="width:80px; text-align:center;">반</th>
+                <th style="width:80px; text-align:center;">번호</th>
+                <th>함께 선택한 추가 과목 (선택 1과목)</th>
+              </tr>
+            </thead>
+            <tbody id="modal-sci4-table-body">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modal-sci4">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Subject Selected Students List Modal -->
+  <div class="modal-overlay" id="modal-subject-students">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-sub-name">과목명 수강 신청 학생 명단</h3>
+          <p style="font-size:0.85rem; color:#64748B; margin-top:3px;" id="modal-sub-subtitle">선택 인원: 0명</p>
+        </div>
+        <button class="close-btn" data-close="modal-subject-students">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:60px; text-align:center;">No</th>
+                <th style="width:70px; text-align:center;">학년</th>
+                <th style="width:80px; text-align:center;">반</th>
+                <th style="width:80px; text-align:center;">번호</th>
+                <th>학생의 다른 선택 과목</th>
+              </tr>
+            </thead>
+            <tbody id="modal-sub-table-body">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modal-subject-students">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Help & Google Sheet Guide Modal -->
+  <div class="modal-overlay" id="modal-help">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>대시보드 사용 방법 및 엑셀 파일 업로드 안내</h3>
+        <button class="close-btn" data-close="modal-help">&times;</button>
+      </div>
+      <div class="modal-body" style="line-height:1.7; font-size:0.92rem; color:#334155;">
+        <h4 style="font-weight:700; color:#1E293B; margin-bottom:8px;">1. 구글 스프레드시트에서 엑셀 파일 다운로드</h4>
+        <ol style="padding-left:20px; margin-bottom:18px;">
+          <li>학교 구글 스프레드시트 파일을 엽니다.</li>
+          <li>상단 메뉴에서 <strong>[파일] → [다운로드] → [Microsoft Excel(.xlsx)]</strong>를 클릭하여 컴퓨터에 저장합니다.</li>
+          <li>웹앱 상단의 <strong>[엑셀 파일 찾아보기]</strong> 버튼을 누르거나 점선 영역에 파일을 끌어다 놓으시면 모든 시트가 자동으로 즉시 분석됩니다!</li>
+        </ol>
+
+        <h4 style="font-weight:700; color:#1E293B; margin-bottom:8px;">2. 지원하는 시트명 및 양식</h4>
+        <ul style="padding-left:20px; margin-bottom:18px;">
+          <li><strong>시트 자동 분류</strong>: 시트명에 <code>2-1</code>, <code>2학년 1학기</code>, <code>3-1</code>, <code>3학년 1학기</code> 등이 포함되어 있으면 자동으로 해당 학기 탭에 매칭됩니다.</li>
+          <li><strong>다양한 양식 지원</strong>: 선택1~선택5 열에 과목명이 적힌 양식, 과목별로 체크(1, O)된 양식, 설문 응답 텍스트 양식을 모두 자동으로 인식합니다.</li>
+        </ul>
+
+        <h4 style="font-weight:700; color:#1E293B; margin-bottom:8px;">3. 깃허브(GitHub Pages) 무료 배포 안내</h4>
+        <p style="margin-bottom:18px;">
+          이 프로젝트는 백엔드 서버가 필요 없는 정적 웹앱입니다. GitHub 저장소에 <code>index.html</code>, <code>style.css</code>, <code>app.js</code>를 올리신 후, 저장소의 <strong>[Settings] → [Pages]</strong>에서 브랜치를 <code>main</code>으로 켜두시면 어디서나 접속할 수 있는 웹사이트가 됩니다.
+        </p>
+
+        <h4 style="font-weight:700; color:#1E293B; margin-bottom:8px;">4. 교육과정 전문가 분석 도구 활용 팁</h4>
+        <ul style="padding-left:20px;">
+          <li><strong>분반 시뮬레이터</strong>: 학급당 기준 인원 슬라이더를 조절하여 개설 학급 수 및 교원 수급 시수를 사전 예측할 수 있습니다.</li>
+          <li><strong>시간표 동시선택 분석</strong>: 함께 많이 신청한 과목을 식별하여 시간표 충돌이 없는 최적의 블록(선택군)을 설계할 수 있습니다.</li>
+          <li><strong>물·화·생·지 4과목 분석</strong>: 2학년 1학기 자연계열 심화 학생들을 별도로 관리하고 진로 진학 상담에 활용할 수 있습니다.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-close="modal-help">확인 완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
