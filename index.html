@@ -124,13 +124,17 @@
         <i data-lucide="award" style="width:16px; height:16px;"></i>
         2025 입학생 (3학년 2학기)
       </button>
+      <button class="tab-btn" data-tab="master_summary">
+        <i data-lucide="layout-grid" style="width:16px; height:16px;"></i>
+        전체 통합 종합 분석
+      </button>
       <button class="tab-btn" data-tab="expert_tools">
         <i data-lucide="cpu" style="width:16px; height:16px;"></i>
-        전문가 도구 (분반·시간표 분석)
+        전문가 도구 (분반·시간표)
       </button>
       <button class="tab-btn" data-tab="student_search">
         <i data-lucide="users" style="width:16px; height:16px;"></i>
-        학생별 선택 & 오류 검증
+        학생별 선택 & 오류검증
       </button>
     </nav>
 
@@ -201,25 +205,26 @@
         </div>
 
         <!-- 2. 4-Science Calm Status Card (Placed in the middle, tone balanced) -->
+        <!-- 2. Science Focus Card (Placed in the middle, tone balanced) -->
         <div class="dashboard-card sci4-middle-card" id="sci4-banner" style="display: none;">
           <div class="card-header-row" style="margin-bottom: 12px;">
-            <h2 class="card-title" style="font-size: 0.98rem;">
+            <h2 class="card-title" style="font-size: 0.98rem;" id="sci-focus-title">
               <i data-lucide="atom" style="width:19px; height:19px; color:#E11D48;"></i>
-              물·화·생·지 4과목 올선택 현황
+              <span id="sci-focus-title-text">물·화·생·지 4과목 올선택 현황</span>
             </h2>
-            <span class="badge badge-pink">자연·공학 집중</span>
+            <span class="badge badge-pink" id="sci-focus-badge">자연·공학 집중</span>
           </div>
           <div class="sci4-middle-body">
             <div class="sci4-num-wrap">
               <div class="sci4-num" id="sci4-count">0명</div>
               <div class="sci4-rate" id="sci4-percent">전체 학생의 0.0%</div>
             </div>
-            <div class="sci4-desc-box">
+            <div class="sci4-desc-box" id="sci-focus-desc">
               2학년 1학기 <strong>선택 4과목</strong> 중 4대 기초 과학(물리학·화학·생명과학·지구과학)을 모두 수강 신청한 학생 현황입니다.
             </div>
             <button class="btn btn-pastel-pink btn-sm" id="btn-view-sci4-students" style="width: 100%; margin-top: 14px;">
               <i data-lucide="list-filter" style="width:15px; height:15px;"></i>
-              4과목 선택자 명단 확인
+              <span id="sci-focus-btn-text">집중 선택자 명단 확인</span>
             </button>
           </div>
         </div>
@@ -305,8 +310,162 @@
 
     </main>
 
+    <!-- TAB CONTENT: MASTER INTEGRATED SUMMARY VIEW -->
+    <main id="tab-view-master" class="tab-content-panel" style="display:none;">
+      
+      <!-- Top Title Bar with Integrated Excel Download -->
+      <section class="dashboard-card" style="margin-bottom: 24px; padding: 20px 24px;">
+        <div class="card-header-row" style="margin-bottom:0;">
+          <div>
+            <h2 style="font-size:1.3rem; font-weight:800; color:#1E293B; display:flex; align-items:center; gap:10px;">
+              <i data-lucide="layout-grid" style="width:26px; height:26px; color:#6366F1;"></i>
+              2027학년도 전 학년·학기 과목 선택 통합 종합 현황
+            </h2>
+            <p style="font-size:0.86rem; color:#64748B; margin-top:4px;">
+              2026 입학생(2학년 1·2학기) 및 2025 입학생(3학년 1·2학기)의 모든 과목별 선택 인원, 예상 분반 수, 교과 시수를 통합 집계하여 조회합니다.
+            </p>
+          </div>
+          <button class="btn btn-pastel-green" id="btn-export-master-excel" style="padding:8px 18px; font-weight:700; font-size:0.88rem;">
+            <i data-lucide="download" style="width:16px; height:16px;"></i>
+            통합 분석 전체 엑셀 다운로드 (.xlsx)
+          </button>
+        </div>
+      </section>
+
+      <!-- 4 Cohort KPI Summary Cards -->
+      <section class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 24px;">
+        <div class="kpi-card purple">
+          <div class="kpi-top">
+            <span class="kpi-label">2026 입학생 (2학년 1학기)</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-purple); color:var(--pastel-purple-text);">
+              <i data-lucide="calendar" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="master-kpi-2026-1-students">0명</div>
+          <div class="kpi-desc" id="master-kpi-2026-1-desc">과목 0개 · 4과학 올선택 0명</div>
+        </div>
+
+        <div class="kpi-card blue">
+          <div class="kpi-top">
+            <span class="kpi-label">2026 입학생 (2학년 2학기)</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-blue); color:var(--pastel-blue-text);">
+              <i data-lucide="calendar" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="master-kpi-2026-2-students">0명</div>
+          <div class="kpi-desc" id="master-kpi-2026-2-desc">과목 0개 · 심화과학 3↑ 0명</div>
+        </div>
+
+        <div class="kpi-card green">
+          <div class="kpi-top">
+            <span class="kpi-label">2025 입학생 (3학년 1학기)</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-green); color:var(--pastel-green-text);">
+              <i data-lucide="award" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="master-kpi-2025-1-students">0명</div>
+          <div class="kpi-desc" id="master-kpi-2025-1-desc">과목 0개 · 전문과학 3↑ 0명</div>
+        </div>
+
+        <div class="kpi-card amber">
+          <div class="kpi-top">
+            <span class="kpi-label">2025 입학생 (3학년 2학기)</span>
+            <div class="kpi-icon-wrap" style="background:var(--pastel-amber); color:var(--pastel-amber-text);">
+              <i data-lucide="award" style="width:20px; height:20px;"></i>
+            </div>
+          </div>
+          <div class="kpi-value" id="master-kpi-2025-2-students">0명</div>
+          <div class="kpi-desc" id="master-kpi-2025-2-desc">과목 0개 · 전 과목 정상 편제</div>
+        </div>
+      </section>
+
+      <!-- Master Integrated Subject Table -->
+      <section class="dashboard-card">
+        <div class="card-header-row">
+          <div>
+            <h2 class="card-title">
+              <i data-lucide="table" style="width:20px; height:20px; color:#10B981;"></i>
+              전체 학기 과목별 선택 및 분반 통합 현황
+            </h2>
+            <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
+              학교 지정과목은 예상 분반 수를 산출하지 않으며('-'), 학생 선택과목은 기준 정원(25명)으로 나눈 후 반올림하여 분반을 계산합니다.
+            </p>
+          </div>
+          <div class="pill-group">
+            <span class="badge badge-purple" id="master-table-row-count">총 0개 과목</span>
+          </div>
+        </div>
+
+        <!-- Master Filter Bar -->
+        <div class="filter-bar">
+          <div class="pill-group" id="master-cohort-filter-pills">
+            <button class="pill-btn active" data-filter="all">전체 학기</button>
+            <button class="pill-btn" data-filter="2026_2_1">2학년 1학기</button>
+            <button class="pill-btn" data-filter="2026_2_2">2학년 2학기</button>
+            <button class="pill-btn" data-filter="2025_3_1">3학년 1학기</button>
+            <button class="pill-btn" data-filter="2025_3_2">3학년 2학기</button>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div class="pill-group" id="master-category-filter-pills">
+              <button class="pill-btn active" data-cat="all">전체 교과</button>
+              <button class="pill-btn" data-cat="기초">기초</button>
+              <button class="pill-btn" data-cat="사회">사회</button>
+              <button class="pill-btn" data-cat="과학">과학</button>
+              <button class="pill-btn" data-cat="생활교양">생활교양</button>
+              <button class="pill-btn" data-cat="예체능">체육·예술</button>
+            </div>
+
+            <div class="search-box">
+              <i data-lucide="search" style="width:16px; height:16px; color:#94A3B8;"></i>
+              <input type="text" id="master-search-input" placeholder="통합 과목명 검색...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Table -->
+        <div class="table-container">
+          <table class="data-table" id="master-subject-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">대상 학기</th>
+                <th style="width: 95px;">교과 영역</th>
+                <th>과목명</th>
+                <th style="width: 130px;">이수 구분</th>
+                <th style="width: 85px; text-align:center;">학점</th>
+                <th style="width: 100px; text-align:right;">선택 인원</th>
+                <th style="width: 135px; text-align:center;">예상 분반 수 (25명 기준)</th>
+                <th style="width: 155px;">선택률 (%)</th>
+                <th style="width: 100px; text-align:center;">개설 상태</th>
+              </tr>
+            </thead>
+            <tbody id="master-subject-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
     <!-- TAB CONTENT: EXPERT TOOLS -->
     <main id="tab-view-expert" class="tab-content-panel" style="display:none;">
+      
+      <!-- Cohort Selector Pills for Expert Tools (NEW) -->
+      <section class="dashboard-card" style="margin-bottom: 20px; padding: 16px 20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="calendar" style="width:18px; height:18px; color:#6366F1;"></i>
+            <span style="font-weight:700; color:#1E293B; font-size:0.95rem;">분석 대상 학기 선택:</span>
+          </div>
+          <div class="pill-group" id="expert-cohort-pills">
+            <button class="pill-btn active" data-cohort="2026_2_1">2026 입학생 (2학년 1학기)</button>
+            <button class="pill-btn" data-cohort="2026_2_2">2026 입학생 (2학년 2학기)</button>
+            <button class="pill-btn" data-cohort="2025_3_1">2025 입학생 (3학년 1학기)</button>
+            <button class="pill-btn" data-cohort="2025_3_2">2025 입학생 (3학년 2학기)</button>
+          </div>
+        </div>
+      </section>
       
       <!-- Section Simulator Controls -->
       <section class="dashboard-card" style="margin-bottom: 24px;">
@@ -480,13 +639,35 @@
               학생별 전 과목 수강신청 조회
             </h2>
             <p style="font-size:0.85rem; color:#64748B; margin-top:4px;">
-              반 또는 번호로 검색하여 학생이 선택한 전체 과목 내역(1로 표기된 과목)을 조회합니다.
+              학급(반)별로 선택하여 학생의 전 과목 수강신청 내역을 조회합니다. (기본: 학년별 1반)
             </p>
           </div>
           
-          <div class="search-box" style="width: 260px;">
-            <i data-lucide="search" style="width:16px; height:16px; color:#94A3B8;"></i>
-            <input type="text" id="student-search-input" placeholder="반 또는 번호 검색 (예: 1반, 12번)..." style="width: 100%;">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <!-- Grade/Semester Dropdown -->
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label for="student-filter-cohort" style="font-size:0.83rem; font-weight:700; color:#475569;">학기 선택:</label>
+              <select id="student-filter-cohort" class="custom-select">
+                <option value="2026_2_1" selected>2026 입학생 (2학년 1학기)</option>
+                <option value="2026_2_2">2026 입학생 (2학년 2학기)</option>
+                <option value="2025_3_1">2025 입학생 (3학년 1학기)</option>
+                <option value="2025_3_2">2025 입학생 (3학년 2학기)</option>
+              </select>
+            </div>
+
+            <!-- Class (Ban) Dropdown -->
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label for="student-filter-ban" style="font-size:0.83rem; font-weight:700; color:#475569;">학급(반):</label>
+              <select id="student-filter-ban" class="custom-select">
+                <option value="1" selected>1반</option>
+                <option value="all">전체 반 보기</option>
+              </select>
+            </div>
+
+            <div class="search-box" style="width: 180px;">
+              <i data-lucide="search" style="width:15px; height:15px; color:#94A3B8;"></i>
+              <input type="text" id="student-search-input" placeholder="번호 / 이름 검색..." style="width: 100%;">
+            </div>
           </div>
         </div>
 

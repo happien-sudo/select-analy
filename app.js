@@ -194,6 +194,12 @@ const state = {
   typeFilter: 'all',
   searchQuery: '',
   simClassSize: 25,
+  expertCohort: '2026_2_1',
+  studentCohort: '2026_2_1',
+  studentBan: '1',
+  masterCohortFilter: 'all',
+  masterCategoryFilter: 'all',
+  masterSearchQuery: '',
   data: {
     '2026_2_1': { name: '2026 입학생 (2학년 1학기)', students: [], subjects: [] },
     '2026_2_2': { name: '2026 입학생 (2학년 2학기)', students: [], subjects: [] },
@@ -628,21 +634,94 @@ function loadDatasetIntoState(cohortKey, studentList) {
 }
 
 // -------------------------------------------------------------
-// 4-Science Detection (물리학, 화학, 생명과학, 지구과학)
-// In 2026 2-1: exactly the 4 science subjects in '선택 4과목'
+// Science Focus Detection by Cohort
+// 1. 2026_2_1: 물리학, 화학, 생명과학, 지구과학 (4과목 올선택)
+// 2. 2026_2_2: 세포와 물질대사, 역학과 에너지, 지구시스템과학, 화학반응의 세계 (3과목 이상 선택)
+// 3. 2025_3_1: 물질과 에너지, 전자기와 양자, 생물의 유전, 행성우주과학 (3과목 이상 선택)
 // -------------------------------------------------------------
-function get4ScienceStudents(cohortKey = '2026_2_1') {
+function getScienceFocusInfo(cohortKey) {
   const targetCohort = state.data[cohortKey];
-  if (!targetCohort || !targetCohort.students) return [];
+  const allStudents = targetCohort?.students || [];
 
-  return targetCohort.students.filter(student => {
-    const studentChoices = (student.choices || []).map(normalizeSubjectKey);
-    const hasPhysics = studentChoices.some(c => c.includes('물리'));
-    const hasChem = studentChoices.some(c => c.includes('화학') && !c.includes('화학반응'));
-    const hasBio = studentChoices.some(c => c.includes('생명'));
-    const hasEarth = studentChoices.some(c => c.includes('지구') && !c.includes('지구시스템'));
-    return hasPhysics && hasChem && hasBio && hasEarth;
-  });
+  if (cohortKey === '2026_2_1') {
+    const targetNames = ['물리학', '화학', '생명과학', '지구과학'];
+    const matched = allStudents.filter(student => {
+      const studentChoices = (student.choices || []).map(normalizeSubjectKey);
+      const hasPhysics = studentChoices.some(c => c.includes('물리'));
+      const hasChem = studentChoices.some(c => c.includes('화학') && !c.includes('화학반응'));
+      const hasBio = studentChoices.some(c => c.includes('생명'));
+      const hasEarth = studentChoices.some(c => c.includes('지구') && !c.includes('지구시스템'));
+      return hasPhysics && hasChem && hasBio && hasEarth;
+    });
+
+    return {
+      active: true,
+      cohortKey: '2026_2_1',
+      title: '물·화·생·지 4과목 올선택 현황',
+      badge: '자연·공학 집중 (4과목)',
+      desc: '2학년 1학기 선택 4과목 중 <strong>물리학·화학·생명과학·지구과학</strong> 4과목을 모두 수강 신청한 학생 현황입니다.',
+      btnText: '4과목 올선택자 명단 확인',
+      modalTitle: '2026 입학생 2학년 1학기 - 물·화·생·지 4과목 올선택 학생 명단',
+      subjects: targetNames,
+      students: matched
+    };
+  } else if (cohortKey === '2026_2_2') {
+    const targetNames = ['세포와 물질대사', '역학과 에너지', '지구시스템과학', '화학반응의 세계'];
+    const targetKeys = targetNames.map(normalizeSubjectKey);
+    const matched = allStudents.filter(student => {
+      const studentChoices = (student.choices || []).map(normalizeSubjectKey);
+      let matchCount = 0;
+      targetKeys.forEach(k => {
+        if (studentChoices.some(c => c.includes(k) || k.includes(c))) matchCount++;
+      });
+      return matchCount >= 3;
+    });
+
+    return {
+      active: true,
+      cohortKey: '2026_2_2',
+      title: '심화과학 3과목 이상 선택 현황',
+      badge: '자연·이공계 집중 (3과목↑)',
+      desc: '2학년 2학기 <strong>세포와 물질대사, 역학과 에너지, 지구시스템과학, 화학반응의 세계</strong> 중 3과목 이상을 선택한 학생 현황입니다.',
+      btnText: '심화과학 3과목 이상 선택자 명단 확인',
+      modalTitle: '2026 입학생 2학년 2학기 - 심화과학 3과목 이상 선택 학생 명단',
+      subjects: targetNames,
+      students: matched
+    };
+  } else if (cohortKey === '2025_3_1') {
+    const targetNames = ['물질과 에너지', '전자기와 양자', '생물의 유전', '행성우주과학'];
+    const targetKeys = targetNames.map(normalizeSubjectKey);
+    const matched = allStudents.filter(student => {
+      const studentChoices = (student.choices || []).map(normalizeSubjectKey);
+      let matchCount = 0;
+      targetKeys.forEach(k => {
+        if (studentChoices.some(c => c.includes(k) || k.includes(c))) matchCount++;
+      });
+      return matchCount >= 3;
+    });
+
+    return {
+      active: true,
+      cohortKey: '2025_3_1',
+      title: '전문과학 3과목 이상 선택 현황',
+      badge: '자연·이공계 집중 (3과목↑)',
+      desc: '3학년 1학기 <strong>물질과 에너지, 전자기와 양자, 생물의 유전, 행성우주과학</strong> 중 3과목 이상을 선택한 학생 현황입니다.',
+      btnText: '전문과학 3과목 이상 선택자 명단 확인',
+      modalTitle: '2025 입학생 3학년 1학기 - 전문과학 3과목 이상 선택 학생 명단',
+      subjects: targetNames,
+      students: matched
+    };
+  }
+
+  return {
+    active: false,
+    cohortKey: cohortKey,
+    students: []
+  };
+}
+
+function get4ScienceStudents(cohortKey = '2026_2_1') {
+  return getScienceFocusInfo(cohortKey).students || [];
 }
 
 // -------------------------------------------------------------
@@ -688,16 +767,22 @@ function renderDashboard() {
   const currentKey = state.activeTab;
 
   document.getElementById('tab-view-cohort').style.display =
-    (currentKey === 'expert_tools' || currentKey === 'student_search') ? 'none' : 'block';
+    (currentKey === 'expert_tools' || currentKey === 'student_search' || currentKey === 'master_summary') ? 'none' : 'block';
   document.getElementById('tab-view-expert').style.display =
     (currentKey === 'expert_tools') ? 'block' : 'none';
   document.getElementById('tab-view-students').style.display =
     (currentKey === 'student_search') ? 'block' : 'none';
+  const masterView = document.getElementById('tab-view-master');
+  if (masterView) {
+    masterView.style.display = (currentKey === 'master_summary') ? 'block' : 'none';
+  }
 
   if (currentKey === 'expert_tools') {
     renderExpertTools();
   } else if (currentKey === 'student_search') {
     renderStudentSearchAndAudit();
+  } else if (currentKey === 'master_summary') {
+    renderMasterSummaryView();
   } else {
     renderCohortView(currentKey);
   }
@@ -714,18 +799,28 @@ function renderCohortView(cohortKey) {
   const subjects = cohort.subjects || [];
   const totalCount = students.length;
 
-  // 1. 4-Science Calm Status Card (Positioned gracefully between charts on 2026 2-1)
+  // 1. Science Focus Card (Positioned gracefully between charts on 2026 2-1, 2026 2-2, 2025 3-1)
   const sci4Banner = document.getElementById('sci4-banner');
   const chartsGrid = document.querySelector('.charts-grid');
-  const sci4Students = get4ScienceStudents(cohortKey);
-  const sci4Count = sci4Students.length;
+  const sciFocus = getScienceFocusInfo(cohortKey);
 
-  if (cohortKey === '2026_2_1') {
+  if (sciFocus.active) {
     if (sci4Banner) sci4Banner.style.display = 'flex';
     if (chartsGrid) chartsGrid.classList.remove('hide-sci4');
-    document.getElementById('sci4-count').textContent = `${sci4Count}명`;
-    const sci4Rate = totalCount > 0 ? ((sci4Count / totalCount) * 100).toFixed(1) : '0.0';
-    document.getElementById('sci4-percent').textContent = `전체 학생의 ${sci4Rate}% (${sci4Count}명)`;
+
+    const titleEl = document.getElementById('sci-focus-title-text');
+    if (titleEl) titleEl.textContent = sciFocus.title;
+    const badgeEl = document.getElementById('sci-focus-badge');
+    if (badgeEl) badgeEl.textContent = sciFocus.badge;
+    const descEl = document.getElementById('sci-focus-desc');
+    if (descEl) descEl.innerHTML = sciFocus.desc;
+    const btnTextEl = document.getElementById('sci-focus-btn-text');
+    if (btnTextEl) btnTextEl.textContent = sciFocus.btnText;
+
+    const count = sciFocus.students.length;
+    document.getElementById('sci4-count').textContent = `${count}명`;
+    const sciRate = totalCount > 0 ? ((count / totalCount) * 100).toFixed(1) : '0.0';
+    document.getElementById('sci4-percent').textContent = `전체 학생의 ${sciRate}% (${count}명)`;
   } else {
     if (sci4Banner) sci4Banner.style.display = 'none';
     if (chartsGrid) chartsGrid.classList.add('hide-sci4');
@@ -893,16 +988,20 @@ function renderSubjectTable(subjects, totalCount) {
     if (sub.category === '예체능') catBadgeClass = 'badge-pink';
 
     // Detailed Group Badge: 학교지정, 택4, 택5, 택1
+    const isDesignated = (sub.type === '지정' || sub.group === '학교지정' || sub.badge === '학교지정');
     let groupBadgeClass = 'badge-purple';
-    if (sub.type === '지정' || sub.group === '학교지정') groupBadgeClass = 'badge-gray';
+    if (isDesignated) groupBadgeClass = 'badge-gray';
     else if (sub.badge === '택4') groupBadgeClass = 'badge-amber';
     else if (sub.badge === '택5') groupBadgeClass = 'badge-purple';
     else if (sub.badge === '택1') groupBadgeClass = 'badge-blue';
 
-    const sections = Math.ceil(sub.count / 25);
+    // 25명 기준 반올림 (학교 지정과목은 분반 산출 제외 '-')
+    const sections = isDesignated ? '-' : Math.round(sub.count / 25);
 
     let statusBadge = `<span class="badge badge-green">개설 안정</span>`;
-    if (sub.type === '선택') {
+    if (isDesignated) {
+      statusBadge = `<span class="badge badge-gray">학교지정</span>`;
+    } else {
       if (sub.count === 0) {
         statusBadge = `<span class="badge badge-gray">미선택</span>`;
       } else if (sub.count < 10) {
@@ -923,10 +1022,12 @@ function renderSubjectTable(subjects, totalCount) {
         </strong>
         ${isSci4 ? '<span class="badge badge-pink" style="margin-left:6px; font-size:0.7rem;">물·화·생·지</span>' : ''}
       </td>
-      <td><span class="badge ${groupBadgeClass}">${sub.group || sub.badge || '학생선택'}</span></td>
+      <td><span class="badge ${groupBadgeClass}">${sub.group || sub.badge || (isDesignated ? '학교지정' : '학생선택')}</span></td>
       <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">${sub.units || 3}학점</td>
       <td style="text-align:right; font-weight:800; color:#0F172A; font-size:1rem; white-space:nowrap;">${sub.count}명</td>
-      <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">${sections}개 분반</td>
+      <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">
+        ${isDesignated ? '<span style="color:#94A3B8; font-weight:normal;">-</span>' : `${sections}개 분반`}
+      </td>
       <td>
         <div class="progress-bar-wrap">
           <div class="progress-track">
@@ -952,10 +1053,15 @@ function renderSubjectTable(subjects, totalCount) {
 // Expert Tools View Render (Simulator with Exact Credits)
 // -------------------------------------------------------------
 function renderExpertTools() {
-  const currentKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
-  const cohort = state.data[currentKey];
+  const currentKey = state.expertCohort || '2026_2_1';
+  const cohort = state.data[currentKey] || {};
   const subjects = cohort.subjects || [];
   const classSize = state.simClassSize;
+
+  // Update active pill button
+  document.querySelectorAll('#expert-cohort-pills button').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-cohort') === currentKey);
+  });
 
   // 1. Simulator table & summary
   const simTbody = document.getElementById('sim-table-body');
@@ -965,15 +1071,24 @@ function renderExpertTools() {
   let totalHours = 0;
 
   subjects.forEach(sub => {
-    const sections = Math.ceil(sub.count / classSize);
-    totalSections += sections;
+    const isDesignated = (sub.type === '지정' || sub.group === '학교지정' || sub.badge === '학교지정');
     const units = sub.units || 3;
-    const hours = sections * units;
-    totalHours += hours;
-    const avgPerClass = sections > 0 ? (sub.count / sections).toFixed(1) : 0;
+    let sectionsDisplay = '-';
+    let avgPerClass = '-';
+    let hoursDisplay = '-';
+    let diag = '<span class="badge badge-gray">기존 학급 운영</span>';
 
-    let diag = '<span class="badge badge-green">정상 운영</span>';
-    if (sub.type === '선택') {
+    if (!isDesignated) {
+      // 기준 정원 나눈 후 소수 첫째 자리 반올림
+      const sections = Math.round(sub.count / classSize);
+      totalSections += sections;
+      const hours = sections * units;
+      totalHours += hours;
+      sectionsDisplay = `${sections}개 반`;
+      avgPerClass = sections > 0 ? `${(sub.count / sections).toFixed(1)}명/반` : '0명/반';
+      hoursDisplay = `${hours}시간`;
+
+      diag = '<span class="badge badge-green">정상 운영</span>';
       if (sub.count === 0) diag = '<span class="badge badge-gray">미개설</span>';
       else if (sub.count < 10) diag = '<span class="badge badge-pink">폐강 심의 요망</span>';
       else if (sub.count < 15) diag = '<span class="badge badge-amber">소인수 개설</span>';
@@ -983,12 +1098,12 @@ function renderExpertTools() {
     tr.innerHTML = `
       <td><span class="badge badge-gray">${sub.category}</span></td>
       <td><strong>${sub.name}</strong></td>
-      <td><span class="badge badge-purple">${sub.badge || sub.group || '선택'}</span></td>
+      <td><span class="badge badge-purple">${sub.badge || sub.group || (isDesignated ? '학교지정' : '선택')}</span></td>
       <td style="text-align:right; font-weight:700;">${sub.count}명</td>
-      <td style="text-align:center; font-weight:800; color:#4F46E5;">${sections}개 반</td>
-      <td style="text-align:center;">${avgPerClass}명/반</td>
+      <td style="text-align:center; font-weight:800; color:#4F46E5;">${isDesignated ? '<span style="color:#94A3B8; font-weight:normal;">-</span>' : sectionsDisplay}</td>
+      <td style="text-align:center;">${isDesignated ? '<span style="color:#94A3B8;">-</span>' : avgPerClass}</td>
       <td style="text-align:center; font-weight:700; color:#6366F1;">${units}학점</td>
-      <td style="text-align:center; font-weight:700; color:#059669;">${hours}시간</td>
+      <td style="text-align:center; font-weight:700; color:#059669;">${isDesignated ? '<span style="color:#94A3B8;">-</span>' : hoursDisplay}</td>
       <td>${diag}</td>
     `;
     simTbody.appendChild(tr);
@@ -1064,43 +1179,112 @@ function renderExpertTools() {
 }
 
 // -------------------------------------------------------------
+// Audit Student Choices against Official Curriculum Definition
+// -------------------------------------------------------------
+function auditStudentChoices(student, cohortKey) {
+  const targetKey = (cohortKey && cohortKey.startsWith('202')) ? cohortKey : (student.grade === '3' ? '2025_3_1' : '2026_2_1');
+  const def = CURRICULUM_DEFINITION[targetKey];
+  const studentChoices = (student.choices || []).map(normalizeSubjectKey);
+  const reasons = [];
+
+  if (def && def.groups) {
+    def.groups.forEach(g => {
+      const groupNorms = g.subjects.map(s => normalizeSubjectKey(s.name));
+      const chosenInGroup = studentChoices.filter(c => groupNorms.some(gn => c.includes(gn) || gn.includes(c)));
+      if (chosenInGroup.length !== g.requiredCount) {
+        if (chosenInGroup.length < g.requiredCount) {
+          reasons.push(`${g.name}: ${chosenInGroup.length}/${g.requiredCount} (${g.requiredCount - chosenInGroup.length}개 미달)`);
+        } else {
+          reasons.push(`${g.name}: ${chosenInGroup.length}/${g.requiredCount} (${chosenInGroup.length - g.requiredCount}개 초과)`);
+        }
+      }
+    });
+  }
+
+  return {
+    isValid: reasons.length === 0,
+    reasons: reasons
+  };
+}
+
+// Update Ban Dropdown for Student Tab
+function updateStudentBanDropdown() {
+  const targetCohortKey = state.studentCohort || '2026_2_1';
+  const cohort = state.data[targetCohortKey];
+  const students = cohort?.students || [];
+  const banSelect = document.getElementById('student-filter-ban');
+  if (!banSelect) return;
+
+  // Extract unique bans
+  const uniqueBans = Array.from(new Set(students.map(s => String(s.ban || '').trim()).filter(Boolean)))
+    .sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+
+  const currentVal = state.studentBan || '1';
+  banSelect.innerHTML = '';
+
+  if (uniqueBans.length === 0) {
+    banSelect.innerHTML = '<option value="1">1반</option><option value="all">전체 반</option>';
+    return;
+  }
+
+  uniqueBans.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b;
+    opt.textContent = `${b}반`;
+    if (b === currentVal) opt.selected = true;
+    banSelect.appendChild(opt);
+  });
+
+  const optAll = document.createElement('option');
+  optAll.value = 'all';
+  optAll.textContent = '전체 반 보기';
+  if (currentVal === 'all') optAll.selected = true;
+  banSelect.appendChild(optAll);
+
+  // Default to '1' if available, otherwise first ban
+  if (currentVal !== 'all' && !uniqueBans.includes(currentVal)) {
+    state.studentBan = uniqueBans.includes('1') ? '1' : uniqueBans[0];
+    banSelect.value = state.studentBan;
+  }
+}
+
+// -------------------------------------------------------------
 // Student Search & Audit View Render (Using Official Curriculum Rules)
 // -------------------------------------------------------------
 function renderStudentSearchAndAudit() {
-  const currentKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
-  const cohort = state.data[currentKey];
+  const currentKey = state.studentCohort || '2026_2_1';
+  const cohort = state.data[currentKey] || {};
   const students = cohort.students || [];
-  const def = CURRICULUM_DEFINITION[currentKey];
+
+  // Sync cohort dropdown
+  const cohortSelect = document.getElementById('student-filter-cohort');
+  if (cohortSelect && cohortSelect.value !== currentKey) {
+    cohortSelect.value = currentKey;
+  }
+
+  // Populate ban dropdown
+  updateStudentBanDropdown();
 
   const auditErrors = [];
 
   students.forEach(st => {
     const studentChoices = (st.choices || []).map(normalizeSubjectKey);
-    const errors = [];
+    const auditRes = auditStudentChoices(st, currentKey);
 
-    if (def && def.groups) {
-      def.groups.forEach(g => {
-        const groupNorms = g.subjects.map(s => normalizeSubjectKey(s.name));
-        const chosenInGroup = studentChoices.filter(c => groupNorms.includes(c));
-        if (chosenInGroup.length !== g.requiredCount) {
-          if (chosenInGroup.length < g.requiredCount) {
-            errors.push(`${g.name}: ${chosenInGroup.length}/${g.requiredCount} (${g.requiredCount - chosenInGroup.length}개 미달)`);
-          } else {
-            errors.push(`${g.name}: ${chosenInGroup.length}/${g.requiredCount} (${chosenInGroup.length - g.requiredCount}개 초과)`);
-          }
-        }
-      });
-    }
-
-    if (errors.length > 0) {
+    if (!auditRes.isValid) {
       auditErrors.push({
         grade: st.grade || '2',
         ban: st.ban,
         num: st.num,
-        cohortName: cohort.name,
+        cohortName: cohort.name || currentKey,
         count: studentChoices.length,
         choices: (st.choices || []).join(', '),
-        reason: errors.join(' | ')
+        reason: auditRes.reasons.join(' | ')
       });
     }
   });
@@ -1132,14 +1316,20 @@ function renderStudentSearchAndAudit() {
 }
 
 function renderAllStudentsTable() {
-  const currentKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
-  const cohort = state.data[currentKey];
-  const students = cohort?.students || [];
+  const currentKey = state.studentCohort || '2026_2_1';
+  const cohort = state.data[currentKey] || {};
+  const students = cohort.students || [];
+  const selectedBan = state.studentBan || '1';
   const searchInput = document.getElementById('student-search-input')?.value?.trim().toLowerCase() || '';
   const tbody = document.getElementById('all-students-table-body');
   tbody.innerHTML = '';
 
   const filtered = students.filter(st => {
+    // 1. Filter by Ban (Class)
+    if (selectedBan !== 'all') {
+      if (String(st.ban || '').trim() !== String(selectedBan).trim()) return false;
+    }
+    // 2. Filter by search input
     if (!searchInput) return true;
     if (st.name && st.name.toLowerCase().includes(searchInput)) return true;
     const term = searchInput.replace(/[^0-9]/g, '');
@@ -1150,25 +1340,44 @@ function renderAllStudentsTable() {
   });
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#94A3B8;">검색 결과가 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:32px; color:#94A3B8;">선택하신 학급(${selectedBan === 'all' ? '전체' : selectedBan + '반'})에 해당하는 학생이 없습니다.</td></tr>`;
     return;
   }
 
   filtered.forEach(st => {
     const studentChoices = (st.choices || []).map(normalizeSubjectKey);
-    const isSci4 = studentChoices.some(c => c.includes('물리')) &&
+
+    // Science Focus detection according to cohort
+    let isSciFocus = false;
+    let sciBadgeText = '';
+    if (currentKey === '2026_2_1') {
+      isSciFocus = studentChoices.some(c => c.includes('물리')) &&
                    studentChoices.some(c => c.includes('화학') && !c.includes('화학반응')) &&
                    studentChoices.some(c => c.includes('생명')) &&
                    studentChoices.some(c => c.includes('지구') && !c.includes('지구시스템'));
+      sciBadgeText = '물·화·생·지';
+    } else if (currentKey === '2026_2_2') {
+      const sciList = ['세포와물질대사', '역학과에너지', '지구시스템과학', '화학반응의세계'];
+      let cnt = 0;
+      sciList.forEach(k => { if (studentChoices.some(c => c.includes(k) || k.includes(c))) cnt++; });
+      isSciFocus = cnt >= 3;
+      sciBadgeText = `심화과학 ${cnt}과목`;
+    } else if (currentKey === '2025_3_1') {
+      const sciList = ['물질과에너지', '전자기와양자', '생물의유전', '행성우주과학'];
+      let cnt = 0;
+      sciList.forEach(k => { if (studentChoices.some(c => c.includes(k) || k.includes(c))) cnt++; });
+      isSciFocus = cnt >= 3;
+      sciBadgeText = `전문과학 ${cnt}과목`;
+    }
 
     const nameTag = st.name ? ` <span style="font-size:0.8rem; color:#64748B; font-weight:normal;">(${st.name})</span>` : '';
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td style="text-align:center; font-weight:600; color:#64748B;">${st.grade || '2'}</td>
+      <td style="text-align:center; font-weight:600; color:#64748B;">${st.grade || (currentKey.startsWith('2026') ? '2' : '3')}</td>
       <td style="text-align:center; font-weight:700; color:#1E293B;">${st.ban}반</td>
       <td style="text-align:center; font-weight:700; color:#1E293B;">${st.num}번${nameTag}</td>
-      <td>${cohort?.name || currentKey}</td>
+      <td>${cohort.name || currentKey}</td>
       <td>
         <div style="display:flex; flex-wrap:wrap; gap:4px;">
           ${(st.choices || []).map(c => `<span class="badge badge-gray">${c}</span>`).join('')}
@@ -1176,7 +1385,7 @@ function renderAllStudentsTable() {
       </td>
       <td style="text-align:center; font-weight:700;">${(st.choices || []).length}개</td>
       <td style="text-align:center;">
-        ${isSci4 ? '<span class="badge badge-pink">물·화·생·지</span>' : '<span style="color:#94A3B8;">-</span>'}
+        ${isSciFocus ? `<span class="badge badge-pink">${sciBadgeText}</span>` : '<span style="color:#94A3B8;">-</span>'}
       </td>
       <td style="text-align:center;">
         <button class="btn btn-outline btn-sm student-detail-btn" data-ban="${st.ban}" data-num="${st.num}" style="padding:3px 8px; font-size:0.75rem;">
@@ -1189,11 +1398,13 @@ function renderAllStudentsTable() {
 
   document.querySelectorAll('.student-detail-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const ban = btn.getAttribute('data-ban');
-      const num = btn.getAttribute('data-num');
-      const student = students.find(s => s.ban === ban && s.num === num);
+      const ban = String(btn.getAttribute('data-ban') || '').trim();
+      const num = String(btn.getAttribute('data-num') || '').trim();
+      const student = students.find(s => String(s.ban).trim() === ban && String(s.num).trim() === num);
       if (student) {
         openStudentDetailModal(student, currentKey);
+      } else {
+        console.warn('Student not found for ban:', ban, 'num:', num);
       }
     });
   });
@@ -1205,94 +1416,112 @@ function renderAllStudentsTable() {
 
 // Open Student Detailed Selection Modal
 function openStudentDetailModal(student, cohortKey) {
-  const modal = document.getElementById('modal-student-detail');
-  if (!modal) return;
+  try {
+    const modal = document.getElementById('modal-student-detail');
+    if (!modal) return;
 
-  const cohortName = state.data[cohortKey]?.name || cohortKey;
-  document.getElementById('modal-student-cohort-subtitle').textContent = cohortName;
+    const targetCohortKey = (cohortKey && cohortKey.startsWith('202'))
+      ? cohortKey
+      : (student.grade === '3' ? '2025_3_1' : '2026_2_1');
 
-  const infoText = `${student.grade || '2'}학년 ${student.ban}반 ${student.num}번`;
-  document.getElementById('modal-student-info-text').textContent = infoText;
+    const cohortName = state.data[targetCohortKey]?.name || targetCohortKey;
+    const subtitleEl = document.getElementById('modal-student-cohort-subtitle');
+    if (subtitleEl) subtitleEl.textContent = cohortName;
 
-  const nameTag = document.getElementById('modal-student-nametag');
-  if (student.name) {
-    nameTag.style.display = 'inline-block';
-    nameTag.textContent = student.name;
-  } else {
-    nameTag.style.display = 'none';
+    const infoText = `${student.grade || '2'}학년 ${student.ban}반 ${student.num}번`;
+    const infoTextEl = document.getElementById('modal-student-info-text');
+    if (infoTextEl) infoTextEl.textContent = infoText;
+
+    const nameTag = document.getElementById('modal-student-nametag');
+    if (nameTag) {
+      if (student.name) {
+        nameTag.style.display = 'inline-block';
+        nameTag.textContent = student.name;
+      } else {
+        nameTag.style.display = 'none';
+      }
+    }
+
+    // School Designated List
+    const designatedList = document.getElementById('modal-student-designated-list');
+    const desCount = document.getElementById('modal-student-designated-count');
+    if (designatedList) {
+      designatedList.innerHTML = '';
+      const designated = student.designated || [];
+      if (desCount) desCount.textContent = designated.length;
+      if (designated.length > 0) {
+        designated.forEach(sub => {
+          const cur = getCurriculumSubject(targetCohortKey, sub);
+          const units = cur ? cur.units : (sub.includes('스포츠') ? (sub.includes('1') || sub.includes('2') ? 2 : 1) : 3);
+          const span = document.createElement('span');
+          span.className = 'badge badge-gray';
+          span.style.cssText = 'font-size:0.83rem; padding:6px 12px;';
+          span.textContent = `${sub} (${units}학점)`;
+          designatedList.appendChild(span);
+        });
+      } else {
+        designatedList.innerHTML = '<span style="color:#94A3B8; font-size:0.85rem;">학교 지정 과목 정보 없음</span>';
+      }
+    }
+
+    // Student Choice List
+    const choicesList = document.getElementById('modal-student-choices-list');
+    const choicesCount = document.getElementById('modal-student-choices-count');
+    if (choicesList) {
+      choicesList.innerHTML = '';
+      const choices = student.choices || [];
+      if (choicesCount) choicesCount.textContent = choices.length;
+      if (choices.length > 0) {
+        choices.forEach(sub => {
+          const cur = getCurriculumSubject(targetCohortKey, sub);
+          const units = cur ? cur.units : 3;
+          const badgeType = cur ? (cur.badge || '선택') : '선택';
+          const span = document.createElement('span');
+          span.className = 'badge badge-purple';
+          span.style.cssText = 'font-size:0.83rem; padding:6px 12px;';
+          span.innerHTML = `<strong>${sub}</strong> <small style="opacity:0.85;">[${badgeType}, ${units}학점]</small>`;
+          choicesList.appendChild(span);
+        });
+      } else {
+        choicesList.innerHTML = '<span style="color:#EF4444; font-size:0.85rem;">선택된 과목이 없습니다.</span>';
+      }
+    }
+
+    // Audit Validation Check
+    const auditRes = auditStudentChoices(student, targetCohortKey);
+    const auditBadge = document.getElementById('modal-student-audit-badge');
+    const auditBox = document.getElementById('modal-student-audit-box');
+    const auditDesc = document.getElementById('modal-student-audit-desc');
+    const auditIcon = document.getElementById('modal-student-audit-icon');
+
+    if (auditBadge && auditBox && auditDesc) {
+      if (auditRes.isValid) {
+        auditBadge.className = 'badge badge-green';
+        auditBadge.textContent = '선택 규정 충족';
+        auditBox.style.background = '#F0FDF4';
+        auditBox.style.borderColor = '#BBF7D0';
+        auditDesc.style.color = '#15803D';
+        auditDesc.textContent = '교육과정 편성 기준에 맞게 모든 선택군 규정을 완벽하게 충족하였습니다.';
+        if (auditIcon) auditIcon.setAttribute('data-lucide', 'shield-check');
+      } else {
+        auditBadge.className = 'badge badge-pink';
+        auditBadge.textContent = '선택 규정 불일치';
+        auditBox.style.background = '#FFF1F2';
+        auditBox.style.borderColor = '#FECDD3';
+        auditDesc.style.color = '#BE123C';
+        auditDesc.textContent = auditRes.reasons.join(' / ');
+        if (auditIcon) auditIcon.setAttribute('data-lucide', 'alert-triangle');
+      }
+    }
+
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+
+    modal.classList.add('active');
+  } catch (err) {
+    console.error('Error opening student detail modal:', err);
   }
-
-  // School Designated List
-  const designatedList = document.getElementById('modal-student-designated-list');
-  const desCount = document.getElementById('modal-student-designated-count');
-  designatedList.innerHTML = '';
-  const designated = student.designated || [];
-  desCount.textContent = designated.length;
-  if (designated.length > 0) {
-    designated.forEach(sub => {
-      const cur = getCurriculumSubject(cohortKey, sub);
-      const units = cur ? cur.units : 3;
-      const span = document.createElement('span');
-      span.className = 'badge badge-gray';
-      span.style.cssText = 'font-size:0.83rem; padding:6px 12px;';
-      span.textContent = `${sub} (${units}학점)`;
-      designatedList.appendChild(span);
-    });
-  } else {
-    designatedList.innerHTML = '<span style="color:#94A3B8; font-size:0.85rem;">학교 지정 과목 정보 없음</span>';
-  }
-
-  // Student Choice List
-  const choicesList = document.getElementById('modal-student-choices-list');
-  const choicesCount = document.getElementById('modal-student-choices-count');
-  choicesList.innerHTML = '';
-  const choices = student.choices || [];
-  choicesCount.textContent = choices.length;
-  if (choices.length > 0) {
-    choices.forEach(sub => {
-      const cur = getCurriculumSubject(cohortKey, sub);
-      const units = cur ? cur.units : 3;
-      const badgeType = cur ? (cur.badge || '선택') : '선택';
-      const span = document.createElement('span');
-      span.className = 'badge badge-purple';
-      span.style.cssText = 'font-size:0.83rem; padding:6px 12px;';
-      span.innerHTML = `<strong>${sub}</strong> <small style="opacity:0.85;">[${badgeType}, ${units}학점]</small>`;
-      choicesList.appendChild(span);
-    });
-  } else {
-    choicesList.innerHTML = '<span style="color:#EF4444; font-size:0.85rem;">선택된 과목이 없습니다.</span>';
-  }
-
-  // Audit Validation Check
-  const auditRes = auditStudentChoices(student, cohortKey);
-  const auditBadge = document.getElementById('modal-student-audit-badge');
-  const auditBox = document.getElementById('modal-student-audit-box');
-  const auditDesc = document.getElementById('modal-student-audit-desc');
-  const auditIcon = document.getElementById('modal-student-audit-icon');
-
-  if (auditRes.isValid) {
-    auditBadge.className = 'badge badge-green';
-    auditBadge.textContent = '선택 규정 충족';
-    auditBox.style.background = '#F0FDF4';
-    auditBox.style.borderColor = '#BBF7D0';
-    auditDesc.style.color = '#15803D';
-    auditDesc.textContent = '교육과정 편성 기준에 맞게 모든 선택군 규정을 완벽하게 충족하였습니다.';
-    if (auditIcon) auditIcon.setAttribute('data-lucide', 'shield-check');
-  } else {
-    auditBadge.className = 'badge badge-pink';
-    auditBadge.textContent = '선택 규정 불일치';
-    auditBox.style.background = '#FFF1F2';
-    auditBox.style.borderColor = '#FECDD3';
-    auditDesc.style.color = '#BE123C';
-    auditDesc.textContent = auditRes.reasons.join(' / ');
-    if (auditIcon) auditIcon.setAttribute('data-lucide', 'alert-triangle');
-  }
-
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
-
-  modal.classList.add('active');
 }
 
 // Unified Pastel Alert / Notice Modal
@@ -1329,9 +1558,10 @@ function showAlertModal(title, message, type = 'info') {
 
   modal.classList.add('active');
 }
-function openSubjectStudentsModal(subjectName) {
-  const currentKey = state.activeTab;
-  const cohort = state.data[currentKey];
+function openSubjectStudentsModal(subjectName, cohortKey = '') {
+  const targetKey = cohortKey || (state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1');
+  const cohort = state.data[targetKey];
+  if (!cohort) return;
   const sub = (cohort.subjects || []).find(s => s.name === subjectName);
   if (!sub) return;
 
@@ -1359,17 +1589,26 @@ function openSubjectStudentsModal(subjectName) {
 }
 
 function open4ScienceModal() {
-  const sci4Students = get4ScienceStudents('2026_2_1');
+  const currentKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
+  const sciFocus = getScienceFocusInfo(currentKey);
+  if (!sciFocus.active) return;
+
   const tbody = document.getElementById('modal-sci4-table-body');
   tbody.innerHTML = '';
 
   document.getElementById('modal-sci4-title').textContent =
-    `선택 4과목 중 과학 4과목(물·화·생·지) 올선택자 명단 (총 ${sci4Students.length}명)`;
+    `${sciFocus.modalTitle} (총 ${sciFocus.students.length}명)`;
 
-  sci4Students.forEach((st, idx) => {
+  const normTargets = sciFocus.subjects.map(normalizeSubjectKey);
+
+  sciFocus.students.forEach((st, idx) => {
+    const chosenScience = (st.choices || []).filter(c => {
+      const norm = normalizeSubjectKey(c);
+      return normTargets.some(t => norm.includes(t) || t.includes(norm));
+    });
     const extraChoices = (st.choices || []).filter(c => {
-      const clean = cleanSubjectName(c);
-      return !['물리학', '화학', '생명과학', '지구과학'].includes(clean);
+      const norm = normalizeSubjectKey(c);
+      return !normTargets.some(t => norm.includes(t) || t.includes(norm));
     });
 
     const nameTag = st.name ? ` <span style="font-size:0.8rem; color:#64748B; font-weight:normal;">(${st.name})</span>` : '';
@@ -1377,18 +1616,22 @@ function open4ScienceModal() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="text-align:center; color:#64748B; font-weight:600;">${idx + 1}</td>
-      <td style="text-align:center; font-weight:600;">${st.grade || '2'}</td>
+      <td style="text-align:center; font-weight:600;">${st.grade || (currentKey.startsWith('2026') ? '2' : '3')}</td>
       <td style="text-align:center; font-weight:700; color:#334155;">${st.ban}반</td>
       <td style="text-align:center; font-weight:700; color:#334155;">${st.num}번${nameTag}</td>
       <td>
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:3px;">
+          ${chosenScience.map(c => `<span class="badge badge-pink" style="font-size:0.8rem;">${c}</span>`).join(' ')}
+        </div>
         ${extraChoices.length > 0
-          ? extraChoices.map(c => `<span class="badge badge-purple">${c}</span>`).join(' ')
-          : '<span style="color:#94A3B8;">없음</span>'}
+          ? `<div style="font-size:0.8rem; color:#64748B; margin-top:3px;">기타 선택: ${extraChoices.map(c => `<span class="badge badge-gray" style="font-size:0.75rem;">${c}</span>`).join(' ')}</div>`
+          : ''}
       </td>
     `;
     tbody.appendChild(tr);
   });
 
+  if (window.lucide) window.lucide.createIcons();
   document.getElementById('modal-sci4').classList.add('active');
 }
 
@@ -1426,7 +1669,9 @@ function exportCurrentTableToExcel() {
   ];
 
   cohort.subjects.forEach((s, idx) => {
-    const sections = Math.ceil(s.count / 25);
+    const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
+    const sections = isDesignated ? '-' : Math.round(s.count / 25);
+    const hours = isDesignated ? '-' : (sections * (s.units || 3));
     exportData.push([
       idx + 1,
       s.category,
@@ -1436,7 +1681,7 @@ function exportCurrentTableToExcel() {
       s.count,
       sections,
       s.rate + '%',
-      sections * (s.units || 3)
+      hours
     ]);
   });
 
@@ -1447,30 +1692,41 @@ function exportCurrentTableToExcel() {
 }
 
 function export4ScienceListToExcel() {
-  const sci4Students = get4ScienceStudents('2026_2_1');
+  const currentKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
+  const sciFocus = getScienceFocusInfo(currentKey);
+  if (!sciFocus.active) return;
+
   const exportData = [
-    ['연번', '학년', '반', '번호', '물리학', '화학', '생명과학', '지구과학', '추가 선택 1과목 (중국어/일본어/정보/한문)']
+    ['연번', '학년', '반', '번호', '이름', '선택한 과학과목', '기타 선택 과목']
   ];
 
-  sci4Students.forEach((st, idx) => {
-    const extraChoices = (st.choices || []).filter(c => {
-      const clean = cleanSubjectName(c);
-      return !['물리학', '화학', '생명과학', '지구과학'].includes(clean);
+  const normTargets = sciFocus.subjects.map(normalizeSubjectKey);
+
+  sciFocus.students.forEach((st, idx) => {
+    const chosenScience = (st.choices || []).filter(c => {
+      const norm = normalizeSubjectKey(c);
+      return normTargets.some(t => norm.includes(t) || t.includes(norm));
     });
+    const extraChoices = (st.choices || []).filter(c => {
+      const norm = normalizeSubjectKey(c);
+      return !normTargets.some(t => norm.includes(t) || t.includes(norm));
+    });
+
     exportData.push([
       idx + 1,
-      st.grade || '2',
+      st.grade || (currentKey.startsWith('2026') ? '2' : '3'),
       st.ban,
       st.num,
-      '1', '1', '1', '1',
+      st.name || '',
+      chosenScience.join(', '),
       extraChoices.join(', ')
     ]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, '물화생지_4과목_선택자');
-  XLSX.writeFile(wb, `정명고_2026_2학년1학기_물화생지_4과목선택자_${sci4Students.length}명.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, '과학집중_선택자');
+  XLSX.writeFile(wb, `정명고_${currentKey}_과학집중_선택자_${sciFocus.students.length}명.xlsx`);
 }
 
 function exportCoSelectionMatrixToExcel() {
@@ -1493,6 +1749,246 @@ function exportCoSelectionMatrixToExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '동시선택_상관분석');
   XLSX.writeFile(wb, '정명고_시간표편성_동시선택_상관분석.xlsx');
+}
+
+// -------------------------------------------------------------
+// Integrated Master Summary View (전체 학기 통합 종합 분석)
+// -------------------------------------------------------------
+function renderMasterSummaryView() {
+  const cohorts = ['2026_2_1', '2026_2_2', '2025_3_1', '2025_3_2'];
+  
+  // 1. Update 4 Cohort KPI Summary Cards
+  const kpi2026_1 = state.data['2026_2_1'] || {};
+  const sci2026_1 = getScienceFocusInfo('2026_2_1');
+  const count2026_1 = kpi2026_1.students?.length || 0;
+  const subs2026_1 = kpi2026_1.subjects?.length || 0;
+  const kpi1El = document.getElementById('master-kpi-2026-1-students');
+  if (kpi1El) kpi1El.textContent = `${count2026_1}명`;
+  const desc1El = document.getElementById('master-kpi-2026-1-desc');
+  if (desc1El) desc1El.textContent = `과목 ${subs2026_1}개 · 4과학 올선택 ${sci2026_1.students.length}명`;
+
+  const kpi2026_2 = state.data['2026_2_2'] || {};
+  const sci2026_2 = getScienceFocusInfo('2026_2_2');
+  const count2026_2 = kpi2026_2.students?.length || 0;
+  const subs2026_2 = kpi2026_2.subjects?.length || 0;
+  const kpi2El = document.getElementById('master-kpi-2026-2-students');
+  if (kpi2El) kpi2El.textContent = `${count2026_2}명`;
+  const desc2El = document.getElementById('master-kpi-2026-2-desc');
+  if (desc2El) desc2El.textContent = `과목 ${subs2026_2}개 · 심화과학 3↑ ${sci2026_2.students.length}명`;
+
+  const kpi2025_1 = state.data['2025_3_1'] || {};
+  const sci2025_1 = getScienceFocusInfo('2025_3_1');
+  const count2025_1 = kpi2025_1.students?.length || 0;
+  const subs2025_1 = kpi2025_1.subjects?.length || 0;
+  const kpi3El = document.getElementById('master-kpi-2025-1-students');
+  if (kpi3El) kpi3El.textContent = `${count2025_1}명`;
+  const desc3El = document.getElementById('master-kpi-2025-1-desc');
+  if (desc3El) desc3El.textContent = `과목 ${subs2025_1}개 · 전문과학 3↑ ${sci2025_1.students.length}명`;
+
+  const kpi2025_2 = state.data['2025_3_2'] || {};
+  const count2025_2 = kpi2025_2.students?.length || 0;
+  const subs2025_2 = kpi2025_2.subjects?.length || 0;
+  const kpi4El = document.getElementById('master-kpi-2025-2-students');
+  if (kpi4El) kpi4El.textContent = `${count2025_2}명`;
+  const desc4El = document.getElementById('master-kpi-2025-2-desc');
+  if (desc4El) desc4El.textContent = `과목 ${subs2025_2}개 · 전 과목 정상 편제`;
+
+  // 2. Gather master subjects list
+  const masterList = [];
+  cohorts.forEach(key => {
+    const ch = state.data[key];
+    if (!ch || !ch.subjects) return;
+    ch.subjects.forEach(sub => {
+      masterList.push({
+        cohortKey: key,
+        cohortName: ch.name || key,
+        ...sub
+      });
+    });
+  });
+
+  // 3. Filter masterList
+  const cohortFilter = state.masterCohortFilter || 'all';
+  const catFilter = state.masterCategoryFilter || 'all';
+  const query = (state.masterSearchQuery || '').toLowerCase();
+
+  const filtered = masterList.filter(item => {
+    if (cohortFilter !== 'all' && item.cohortKey !== cohortFilter) return false;
+    if (catFilter !== 'all' && item.category !== catFilter) return false;
+    if (query && !item.name.toLowerCase().includes(query)) return false;
+    return true;
+  });
+
+  const rowCountEl = document.getElementById('master-table-row-count');
+  if (rowCountEl) rowCountEl.textContent = `총 ${filtered.length}개 과목`;
+
+  const tbody = document.getElementById('master-subject-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#94A3B8;">조건에 일치하는 과목이 없습니다.</td></tr>`;
+    return;
+  }
+
+  filtered.forEach(sub => {
+    const isDesignated = (sub.type === '지정' || sub.group === '학교지정' || sub.badge === '학교지정');
+    const sections = isDesignated ? '-' : Math.round(sub.count / 25);
+
+    let catBadgeClass = 'badge-gray';
+    if (sub.category === '기초') catBadgeClass = 'badge-purple';
+    if (sub.category === '사회') catBadgeClass = 'badge-blue';
+    if (sub.category === '과학') catBadgeClass = 'badge-green';
+    if (sub.category === '생활교양') catBadgeClass = 'badge-amber';
+    if (sub.category === '예체능') catBadgeClass = 'badge-pink';
+
+    let groupBadgeClass = 'badge-purple';
+    if (isDesignated) groupBadgeClass = 'badge-gray';
+    else if (sub.badge === '택4') groupBadgeClass = 'badge-amber';
+    else if (sub.badge === '택5') groupBadgeClass = 'badge-purple';
+    else if (sub.badge === '택1') groupBadgeClass = 'badge-blue';
+
+    let statusBadge = `<span class="badge badge-green">개설 안정</span>`;
+    if (isDesignated) {
+      statusBadge = `<span class="badge badge-gray">학교지정</span>`;
+    } else {
+      if (sub.count === 0) statusBadge = `<span class="badge badge-gray">미선택</span>`;
+      else if (sub.count < 10) statusBadge = `<span class="badge badge-pink">폐강 위기</span>`;
+      else if (sub.count < 15) statusBadge = `<span class="badge badge-amber">소인수 주의</span>`;
+    }
+
+    // Cohort badge tag
+    let cohortTag = `<span class="badge badge-purple" style="font-size:0.75rem;">2학년 1학기</span>`;
+    if (sub.cohortKey === '2026_2_2') cohortTag = `<span class="badge badge-blue" style="font-size:0.75rem;">2학년 2학기</span>`;
+    else if (sub.cohortKey === '2025_3_1') cohortTag = `<span class="badge badge-green" style="font-size:0.75rem;">3학년 1학기</span>`;
+    else if (sub.cohortKey === '2025_3_2') cohortTag = `<span class="badge badge-amber" style="font-size:0.75rem;">3학년 2학기</span>`;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${cohortTag}</td>
+      <td><span class="badge ${catBadgeClass}">${sub.category}</span></td>
+      <td>
+        <strong style="color:#1E293B; cursor:pointer; text-decoration:underline; text-underline-offset:3px;" class="subject-clickable-name" data-sub="${sub.name}" data-cohort="${sub.cohortKey}">
+          ${sub.name}
+        </strong>
+      </td>
+      <td><span class="badge ${groupBadgeClass}">${sub.group || sub.badge || (isDesignated ? '학교지정' : '학생선택')}</span></td>
+      <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">${sub.units || 3}학점</td>
+      <td style="text-align:right; font-weight:800; color:#0F172A; font-size:0.95rem; white-space:nowrap;">${sub.count}명</td>
+      <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">
+        ${isDesignated ? '<span style="color:#94A3B8; font-weight:normal;">-</span>' : `${sections}개 분반`}
+      </td>
+      <td>
+        <div class="progress-bar-wrap" style="min-width:110px;">
+          <div class="progress-track">
+            <div class="progress-fill" style="width: ${Math.min(100, sub.rate)}%;"></div>
+          </div>
+          <span style="font-size:0.8rem; font-weight:600; color:#64748B; width:42px; text-align:right;">${sub.rate}%</span>
+        </div>
+      </td>
+      <td style="text-align:center; white-space:nowrap;">${statusBadge}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.querySelectorAll('#master-subject-table .subject-clickable-name').forEach(el => {
+    el.addEventListener('click', () => {
+      const subName = el.getAttribute('data-sub');
+      const cohortKey = el.getAttribute('data-cohort');
+      openSubjectStudentsModal(subName, cohortKey);
+    });
+  });
+}
+
+// -------------------------------------------------------------
+// Master Integrated Excel Export (전 학기 종합 엑셀 파일 생성)
+// -------------------------------------------------------------
+function exportMasterSummaryToExcel() {
+  const wb = XLSX.utils.book_new();
+  const cohorts = ['2026_2_1', '2026_2_2', '2025_3_1', '2025_3_2'];
+
+  // Sheet 1: Master Integrated Overview
+  const masterRows = [
+    ['대상 학기', '순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '예상 분반 수 (25명 기준, 학교지정은 -)', '선택률(%)', '주당 필요 시수']
+  ];
+
+  cohorts.forEach(key => {
+    const ch = state.data[key];
+    if (!ch || !ch.subjects) return;
+    ch.subjects.forEach((s, idx) => {
+      const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
+      const sections = isDesignated ? '-' : Math.round(s.count / 25);
+      const hours = isDesignated ? '-' : (sections * (s.units || 3));
+      masterRows.push([
+        ch.name || key,
+        idx + 1,
+        s.category,
+        s.name,
+        s.group || s.type,
+        s.units || 3,
+        s.count,
+        sections,
+        s.rate + '%',
+        hours
+      ]);
+    });
+  });
+
+  const wsMaster = XLSX.utils.aoa_to_sheet(masterRows);
+  XLSX.utils.book_append_sheet(wb, wsMaster, '전체학기_통합현황');
+
+  // Individual sheets for each of the 4 cohorts
+  cohorts.forEach(key => {
+    const ch = state.data[key];
+    if (!ch || !ch.subjects) return;
+    const sheetRows = [
+      ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '예상 분반 수 (25명 기준)', '선택률(%)', '주당 필요 시수']
+    ];
+    ch.subjects.forEach((s, idx) => {
+      const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
+      const sections = isDesignated ? '-' : Math.round(s.count / 25);
+      const hours = isDesignated ? '-' : (sections * (s.units || 3));
+      sheetRows.push([
+        idx + 1,
+        s.category,
+        s.name,
+        s.group || s.type,
+        s.units || 3,
+        s.count,
+        sections,
+        s.rate + '%',
+        hours
+      ]);
+    });
+
+    const sheetName = key.replace('_', '입학_');
+    const wsCohort = XLSX.utils.aoa_to_sheet(sheetRows);
+    XLSX.utils.book_append_sheet(wb, wsCohort, sheetName);
+  });
+
+  // Sheet for Science Focus Summary
+  const sciRows = [
+    ['학기 구분', '구분 명칭', '대상 과학 과목군', '기준 요건', '해당 학생수', '전체 학생 대비 비율(%)']
+  ];
+  ['2026_2_1', '2026_2_2', '2025_3_1'].forEach(k => {
+    const focus = getScienceFocusInfo(k);
+    if (focus.active) {
+      const total = state.data[k]?.students?.length || 0;
+      const rate = total > 0 ? ((focus.students.length / total) * 100).toFixed(1) : '0.0';
+      sciRows.push([
+        state.data[k]?.name || k,
+        focus.title,
+        focus.subjects.join(', '),
+        k === '2026_2_1' ? '4과목 올선택' : '3과목 이상 선택',
+        focus.students.length,
+        rate + '%'
+      ]);
+    }
+  });
+  const wsSci = XLSX.utils.aoa_to_sheet(sciRows);
+  XLSX.utils.book_append_sheet(wb, wsSci, '과학집중_종합현황');
+
+  XLSX.writeFile(wb, '정명고_2027학년도_과목선택_통합종합분석보고서.xlsx');
 }
 
 // -------------------------------------------------------------
@@ -1974,7 +2470,35 @@ function setupEventListeners() {
     });
   }
 
-  // 5. Student Search Input (in Student Tab)
+  // 5. Expert Cohort Pills Switcher
+  document.querySelectorAll('#expert-cohort-pills button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cohort = btn.getAttribute('data-cohort');
+      if (cohort) {
+        state.expertCohort = cohort;
+        renderExpertTools();
+      }
+    });
+  });
+
+  // 6. Student Filters (Cohort & Ban Dropdowns)
+  const studentCohortSelect = document.getElementById('student-filter-cohort');
+  if (studentCohortSelect) {
+    studentCohortSelect.addEventListener('change', (e) => {
+      state.studentCohort = e.target.value;
+      state.studentBan = '1';
+      renderStudentSearchAndAudit();
+    });
+  }
+
+  const studentBanSelect = document.getElementById('student-filter-ban');
+  if (studentBanSelect) {
+    studentBanSelect.addEventListener('change', (e) => {
+      state.studentBan = e.target.value;
+      renderAllStudentsTable();
+    });
+  }
+
   const studentSearchInput = document.getElementById('student-search-input');
   if (studentSearchInput) {
     studentSearchInput.addEventListener('input', () => {
@@ -1982,7 +2506,34 @@ function setupEventListeners() {
     });
   }
 
-  // 6. Section Simulator Slider
+  // 7. Master Summary View Filters
+  document.querySelectorAll('#master-cohort-filter-pills button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#master-cohort-filter-pills button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.masterCohortFilter = btn.getAttribute('data-filter');
+      renderMasterSummaryView();
+    });
+  });
+
+  document.querySelectorAll('#master-category-filter-pills button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#master-category-filter-pills button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.masterCategoryFilter = btn.getAttribute('data-cat');
+      renderMasterSummaryView();
+    });
+  });
+
+  const masterSearchInput = document.getElementById('master-search-input');
+  if (masterSearchInput) {
+    masterSearchInput.addEventListener('input', (e) => {
+      state.masterSearchQuery = e.target.value.trim();
+      renderMasterSummaryView();
+    });
+  }
+
+  // 8. Section Simulator Slider
   const slider = document.getElementById('sim-class-size-slider');
   if (slider) {
     slider.addEventListener('input', (e) => {
@@ -1992,13 +2543,13 @@ function setupEventListeners() {
     });
   }
 
-  // 7. 4-Science View Students Button
+  // 9. 4-Science View Students Button
   const btnSci4 = document.getElementById('btn-view-sci4-students');
   if (btnSci4) {
     btnSci4.addEventListener('click', open4ScienceModal);
   }
 
-  // 8. Load Sample Data Button
+  // 10. Load Sample Data Button
   const btnLoadSample = document.getElementById('btn-load-sample');
   if (btnLoadSample) {
     btnLoadSample.addEventListener('click', () => {
@@ -2012,7 +2563,7 @@ function setupEventListeners() {
     });
   }
 
-  // 9. File Drag & Drop & Browse
+  // 11. File Drag & Drop & Browse
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const btnBrowseFile = document.getElementById('btn-browse-file');
@@ -2060,22 +2611,23 @@ function setupEventListeners() {
     });
   }
 
-  // 10. Export Buttons
+  // 12. Export Buttons
   document.getElementById('btn-export-excel')?.addEventListener('click', downloadExcelTemplate);
   document.getElementById('btn-export-sci4-excel')?.addEventListener('click', export4ScienceListToExcel);
   document.getElementById('btn-export-matrix')?.addEventListener('click', exportCoSelectionMatrixToExcel);
+  document.getElementById('btn-export-master-excel')?.addEventListener('click', exportMasterSummaryToExcel);
 
-  // 11. Print Button
+  // 13. Print Button
   document.getElementById('btn-print')?.addEventListener('click', () => {
     window.print();
   });
 
-  // 12. Help Guide Modal
+  // 14. Help Guide Modal
   document.getElementById('btn-help-guide')?.addEventListener('click', () => {
     document.getElementById('modal-help')?.classList.add('active');
   });
 
-  // 13. Setup Modal Closers
+  // 15. Setup Modal Closers
   setupModalClosers();
 }
 
