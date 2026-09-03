@@ -257,7 +257,7 @@ function cleanSubjectName(name) {
   if (str === '미적분II' || str === '미적분2') return '미적분Ⅱ';
   if (str === '스포츠생활1' || str === '스포츠 생활 1') return '스포츠 생활1';
   if (str === '스포츠생활2' || str === '스포츠 생활 2') return '스포츠 생활2';
-  if (str === '화학반응의 세계' || str === '화학반응의세계' || str === '화학 반응의세계') return '화학 반응의 세계';
+  if (str === '화학 반응의 세계' || str === '화학 반응의세계' || str === '화학 반응의세계') return '화학 반응의 세계';
   return str;
 }
 
@@ -649,7 +649,7 @@ function getScienceFocusInfo(cohortKey) {
     const matched = allStudents.filter(student => {
       const studentChoices = (student.choices || []).map(normalizeSubjectKey);
       const hasPhysics = studentChoices.some(c => c.includes('물리'));
-      const hasChem = studentChoices.some(c => c.includes('화학') && !c.includes('화학반응'));
+      const hasChem = studentChoices.some(c => c.includes('화학') && !c.includes('화학 반응'));
       const hasBio = studentChoices.some(c => c.includes('생명'));
       const hasEarth = studentChoices.some(c => c.includes('지구') && !c.includes('지구시스템'));
       return hasPhysics && hasChem && hasBio && hasEarth;
@@ -1353,12 +1353,12 @@ function renderAllStudentsTable() {
     let sciBadgeText = '';
     if (currentKey === '2026_2_1') {
       isSciFocus = studentChoices.some(c => c.includes('물리')) &&
-                   studentChoices.some(c => c.includes('화학') && !c.includes('화학반응')) &&
+                   studentChoices.some(c => c.includes('화학') && !c.includes('화학 반응')) &&
                    studentChoices.some(c => c.includes('생명')) &&
                    studentChoices.some(c => c.includes('지구') && !c.includes('지구시스템'));
       sciBadgeText = '물·화·생·지';
     } else if (currentKey === '2026_2_2') {
-      const sciList = ['세포와물질대사', '역학과에너지', '지구시스템과학', '화학반응의세계'];
+      const sciList = ['세포와물질대사', '역학과에너지', '지구시스템과학', '화학 반응의세계'];
       let cnt = 0;
       sciList.forEach(k => { if (studentChoices.some(c => c.includes(k) || k.includes(c))) cnt++; });
       isSciFocus = cnt >= 3;
