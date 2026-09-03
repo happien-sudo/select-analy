@@ -230,12 +230,23 @@ const PASTEL_COLORS = [
 // Normalization & Curriculum Lookup
 // -------------------------------------------------------------
 function normalizeSubjectKey(name) {
-  return String(name || '')
+  let str = String(name || '')
     .replace(/\s+/g, '')
     .replace(/Ⅰ/g, 'I').replace(/Ⅱ/g, 'II')
     .replace(/\(.*?\)/g, '')
     .replace(/\[.*?\]/g, '')
     .trim();
+
+  // Synonyms for 화학 반응의 세계
+  if (str === '화학반응의세계' || str === '화학반응' || str === '화학반응세계' || str.startsWith('화학반응')) {
+    return '화학반응의세계';
+  }
+  if (str === '역학에너지') return '역학과에너지';
+  if (str === '세포물질대사') return '세포와물질대사';
+  if (str === '지구시스템') return '지구시스템과학';
+  if (str === '과제연구') return '과학과제연구';
+
+  return str;
 }
 
 function cleanSubjectName(name) {
@@ -245,6 +256,16 @@ function cleanSubjectName(name) {
   str = str.replace(/\(\s*(지정|선택|공통)\s*\)/g, '');
   str = str.replace(/\[\s*(지정|선택|공통|택\d+)\s*\]/g, '');
   str = str.replace(/\s+/g, ' ').trim();
+
+  // Remove group prefix e.g. "택5_화학반응의 세계", "택5-화학반응의 세계"
+  str = str.replace(/^(택\d+|선택\s*\d+과목|학교지정|지정|선택)\s*[\(_\-:\/]\s*/, '');
+
+  const norm = normalizeSubjectKey(str);
+  if (norm === '화학반응의세계') return '화학 반응의 세계';
+  if (norm === '역학과에너지') return '역학과 에너지';
+  if (norm === '세포와물질대사') return '세포와 물질대사';
+  if (norm === '지구시스템과학') return '지구시스템과학';
+  if (norm === '과학과제연구') return '과학과제연구';
 
   // Standardize common variations
   if (str === '물리학I' || str === '물리학Ⅰ' || str === '물리1' || str === '물리') return '물리학';
@@ -257,7 +278,6 @@ function cleanSubjectName(name) {
   if (str === '미적분II' || str === '미적분2') return '미적분Ⅱ';
   if (str === '스포츠생활1' || str === '스포츠 생활 1') return '스포츠 생활1';
   if (str === '스포츠생활2' || str === '스포츠 생활 2') return '스포츠 생활2';
-  if (normalizeSubjectKey(str) === '화학반응의세계') return '화학 반응의 세계';
   return str;
 }
 
@@ -522,7 +542,7 @@ function generateRealisticSampleData() {
 // Pre-loads ALL subjects defined in CURRICULUM_DEFINITION
 // -------------------------------------------------------------
 function loadDatasetIntoState(cohortKey, studentList) {
-  const subjectMap = {};
+  const subjectMap = {}; // Keyed by normalizeSubjectKey for 100% robust whitespace matching
   const totalStudents = studentList.length;
   const def = CURRICULUM_DEFINITION[cohortKey];
 
@@ -530,7 +550,8 @@ function loadDatasetIntoState(cohortKey, studentList) {
   if (def) {
     // A. Designated subjects
     def.designated.forEach(d => {
-      subjectMap[d.name] = {
+      const normKey = normalizeSubjectKey(d.name);
+      subjectMap[normKey] = {
         name: d.name,
         category: d.category,
         type: '지정',
@@ -545,7 +566,8 @@ function loadDatasetIntoState(cohortKey, studentList) {
     // B. Selection group subjects
     def.groups.forEach(g => {
       g.subjects.forEach(s => {
-        subjectMap[s.name] = {
+        const normKey = normalizeSubjectKey(s.name);
+        subjectMap[normKey] = {
           name: s.name,
           category: s.category,
           type: '선택',
@@ -567,14 +589,24 @@ function loadDatasetIntoState(cohortKey, studentList) {
       const clean = cleanSubjectName(sub);
       if (!clean) return;
 
-      // Find canonical name from curriculum
-      const cur = getCurriculumSubject(cohortKey, clean);
-      const canonicalName = cur ? cur.name : clean;
+      const normKey = normalizeSubjectKey(clean);
+      if (!normKey) return;
 
-      if (!subjectMap[canonicalName]) {
-        const meta = getSubjectMeta(canonicalName, cohortKey);
-        subjectMap[canonicalName] = {
-          name: canonicalName,
+      if (!subjectMap[normKey]) {
+        // Fallback: check curriculum canonical
+        const cur = getCurriculumSubject(cohortKey, clean);
+        const curNorm = cur ? normalizeSubjectKey(cur.name) : normKey;
+        const officialName = cur ? cur.name : clean;
+
+        if (subjectMap[curNorm]) {
+          subjectMap[curNorm].count++;
+          subjectMap[curNorm].students.push(student);
+          return;
+        }
+
+        const meta = getSubjectMeta(officialName, cohortKey);
+        subjectMap[normKey] = {
+          name: officialName,
           category: meta.category,
           type: meta.type || '선택',
           group: meta.group || '학생선택',
@@ -584,23 +616,25 @@ function loadDatasetIntoState(cohortKey, studentList) {
           students: []
         };
       }
-      subjectMap[canonicalName].count++;
-      subjectMap[canonicalName].students.push(student);
+      subjectMap[normKey].count++;
+      subjectMap[normKey].students.push(student);
     });
 
     // Designated from student record if any
     (student.designated || []).forEach(sub => {
       const clean = cleanSubjectName(sub);
       if (!clean) return;
-      const cur = getCurriculumSubject(cohortKey, clean);
-      const canonicalName = cur ? cur.name : clean;
+      const normKey = normalizeSubjectKey(clean);
+      if (!normKey) return;
 
-      if (subjectMap[canonicalName] && subjectMap[canonicalName].type === '지정') {
+      if (subjectMap[normKey] && subjectMap[normKey].type === '지정') {
         // Already populated
-      } else if (!subjectMap[canonicalName]) {
-        const meta = getSubjectMeta(canonicalName, cohortKey);
-        subjectMap[canonicalName] = {
-          name: canonicalName,
+      } else if (!subjectMap[normKey]) {
+        const cur = getCurriculumSubject(cohortKey, clean);
+        const officialName = cur ? cur.name : clean;
+        const meta = getSubjectMeta(officialName, cohortKey);
+        subjectMap[normKey] = {
+          name: officialName,
           category: meta.category,
           type: '지정',
           group: '학교지정',
@@ -609,8 +643,8 @@ function loadDatasetIntoState(cohortKey, studentList) {
           count: 0,
           students: []
         };
-        subjectMap[canonicalName].count++;
-        subjectMap[canonicalName].students.push(student);
+        subjectMap[normKey].count++;
+        subjectMap[normKey].students.push(student);
       }
     });
   });
