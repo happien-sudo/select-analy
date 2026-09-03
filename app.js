@@ -257,7 +257,7 @@ function cleanSubjectName(name) {
   if (str === '미적분II' || str === '미적분2') return '미적분Ⅱ';
   if (str === '스포츠생활1' || str === '스포츠 생활 1') return '스포츠 생활1';
   if (str === '스포츠생활2' || str === '스포츠 생활 2') return '스포츠 생활2';
-  if (str === '화학 반응의 세계' || str === '화학 반응의세계' || str === '화학 반응의세계') return '화학 반응의 세계';
+  if (normalizeSubjectKey(str) === '화학반응의세계') return '화학 반응의 세계';
   return str;
 }
 
@@ -649,7 +649,7 @@ function getScienceFocusInfo(cohortKey) {
     const matched = allStudents.filter(student => {
       const studentChoices = (student.choices || []).map(normalizeSubjectKey);
       const hasPhysics = studentChoices.some(c => c.includes('물리'));
-      const hasChem = studentChoices.some(c => c.includes('화학') && !c.includes('화학 반응'));
+      const hasChem = studentChoices.some(c => c.includes('화학') && !c.includes('화학반응'));
       const hasBio = studentChoices.some(c => c.includes('생명'));
       const hasEarth = studentChoices.some(c => c.includes('지구') && !c.includes('지구시스템'));
       return hasPhysics && hasChem && hasBio && hasEarth;
@@ -1353,12 +1353,12 @@ function renderAllStudentsTable() {
     let sciBadgeText = '';
     if (currentKey === '2026_2_1') {
       isSciFocus = studentChoices.some(c => c.includes('물리')) &&
-                   studentChoices.some(c => c.includes('화학') && !c.includes('화학 반응')) &&
+                   studentChoices.some(c => c.includes('화학') && !c.includes('화학반응')) &&
                    studentChoices.some(c => c.includes('생명')) &&
                    studentChoices.some(c => c.includes('지구') && !c.includes('지구시스템'));
       sciBadgeText = '물·화·생·지';
     } else if (currentKey === '2026_2_2') {
-      const sciList = ['세포와물질대사', '역학과에너지', '지구시스템과학', '화학 반응의세계'];
+      const sciList = ['세포와물질대사', '역학과에너지', '지구시스템과학', '화학반응의세계'];
       let cnt = 0;
       sciList.forEach(k => { if (studentChoices.some(c => c.includes(k) || k.includes(c))) cnt++; });
       isSciFocus = cnt >= 3;
@@ -2059,17 +2059,36 @@ function downloadExcelTemplate() {
 function parseSchoolExcelSheet(sheetName, sheetIndex, jsonRows) {
   if (!jsonRows || jsonRows.length < 2) return null;
 
-  // 1. Determine Target Cohort based on Sheet Name or Index
+  // 1. Determine Target Cohort based on Sheet Name, Index, or Content
   const rawClean = String(sheetName || '').replace(/\s+/g, '');
-  let cohortKey = '2026_2_1';
-  if ((rawClean.includes('2026') && rawClean.includes('2학기')) || rawClean.includes('2-2') || (sheetIndex === 1 && !rawClean.includes('2025'))) {
-    cohortKey = '2026_2_2';
-  } else if ((rawClean.includes('2025') && rawClean.includes('1학기')) || rawClean.includes('3-1') || sheetIndex === 2) {
-    cohortKey = '2025_3_1';
-  } else if ((rawClean.includes('2025') && rawClean.includes('2학기')) || rawClean.includes('3-2') || sheetIndex === 3) {
+  let cohortKey = '';
+
+  if (rawClean.includes('3-2') || rawClean.includes('3_2') || (rawClean.includes('3학년') && rawClean.includes('2학기')) || (rawClean.includes('2025') && rawClean.includes('2학기')) || sheetIndex === 3) {
     cohortKey = '2025_3_2';
-  } else {
+  } else if (rawClean.includes('3-1') || rawClean.includes('3_1') || (rawClean.includes('3학년') && rawClean.includes('1학기')) || (rawClean.includes('2025') && rawClean.includes('1학기')) || sheetIndex === 2) {
+    cohortKey = '2025_3_1';
+  } else if (rawClean.includes('2-2') || rawClean.includes('2_2') || (rawClean.includes('2학년') && rawClean.includes('2학기')) || (rawClean.includes('2026') && rawClean.includes('2학기')) || (sheetIndex === 1 && !rawClean.includes('2025') && !rawClean.includes('3학년'))) {
+    cohortKey = '2026_2_2';
+  } else if (rawClean.includes('2-1') || rawClean.includes('2_1') || (rawClean.includes('2학년') && rawClean.includes('1학기')) || (rawClean.includes('2026') && rawClean.includes('1학기'))) {
     cohortKey = '2026_2_1';
+  }
+
+  // Fallback Content Scan if Sheet Name is ambiguous (e.g. 'Sheet1', '과목선택')
+  if (!cohortKey) {
+    let scanText = '';
+    for (let r = 0; r < Math.min(jsonRows.length, 5); r++) {
+      scanText += (jsonRows[r] || []).join(' ') + ' ';
+    }
+    const normScan = normalizeSubjectKey(scanText);
+    if (normScan.includes('화학반응의세계') || normScan.includes('역학과에너지') || normScan.includes('세포와물질대사') || normScan.includes('지구시스템과학')) {
+      cohortKey = '2026_2_2';
+    } else if (normScan.includes('물질과에너지') || normScan.includes('전자기와양자') || normScan.includes('미적분II') || normScan.includes('문학과영상')) {
+      cohortKey = '2025_3_1';
+    } else if (normScan.includes('독서토론과글쓰기') || normScan.includes('주제탐구독서') || normScan.includes('과학의역사와문화')) {
+      cohortKey = '2025_3_2';
+    } else {
+      cohortKey = '2026_2_1';
+    }
   }
 
   // 2. Intelligent Auto-Detection of Subject Header Row (Scans rows 0 through 9)
@@ -2253,8 +2272,12 @@ function parseSchoolExcelSheet(sheetName, sheetIndex, jsonRows) {
 
     subjectHeaders.forEach(sub => {
       const cell = row[sub.colIndex];
-      // 1 or '1' or 'O' means selected
-      if (cell === 1 || cell === '1' || cell === 1.0 || String(cell).trim() === '1' || String(cell).trim().toUpperCase() === 'O') {
+      // 1, '1', 'O', 'V', '✓', '선택' etc. means selected
+      const isSelected = (
+        cell === 1 || cell === '1' || cell === 1.0 || cell === true ||
+        (cell !== undefined && cell !== null && ['1', '1.0', 'O', 'V', 'Y', 'YES', 'TRUE', 'T', '✓', '✔', '선택'].includes(String(cell).trim().toUpperCase()))
+      );
+      if (isSelected) {
         if (sub.type === '지정') {
           designated.push(sub.cleanName);
         } else {
