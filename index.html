@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>정명고 2027학년도 과목 선택 결과 분석 대시보드</title>
+  <title>과목 선택 결과 분석</title>
   
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
   
   <!-- Pretendard Font & Styles -->
-  <link rel="stylesheet" href="style.css?v=20260903_v3">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="style.css">
   
   <!-- SheetJS (xlsx) for reading and exporting spreadsheets -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -32,15 +33,15 @@
         </div>
         <div>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <h1 class="brand-title">정명고 2027학년도 과목 선택 결과 분석</h1>
-            <span class="badge badge-purple" style="font-size:0.8rem; font-weight:700; padding:4px 10px; border-radius:12px;">제작: 정명고 오인석</span>
+            <h1 class="brand-title">과목 선택 결과 분석</h1>
+            <span class="badge badge-purple" style="font-size:0.8rem; font-weight:700; padding:4px 10px; border-radius:12px;">제작자:정명고 오인석</span>
           </div>
           <p class="brand-subtitle">2026학년도 1·2학년 학생 대상 2027학년도 수강신청 데이터 분석 시스템</p>
         </div>
       </div>
       
       <div class="header-actions">
-        <button class="btn btn-pastel-green btn-sm" id="btn-export-excel" title="정명고 공식 교육과정 엑셀 표준 양식 다운로드" style="padding:6px 14px; font-size:0.82rem;">
+        <button class="btn btn-pastel-green btn-sm" id="btn-export-excel" title="교육과정 엑셀 표준 양식 다운로드" style="padding:6px 14px; font-size:0.82rem;">
           <i data-lucide="file-spreadsheet" style="width:14px; height:14px;"></i>
           엑셀양식 다운로드
         </button>
@@ -955,9 +956,9 @@
   <!-- Footer Credit -->
   <footer style="margin-top: 48px; padding: 24px 0 36px; border-top: 1px solid var(--border-light); text-align: center; color: #94A3B8; font-size: 0.85rem;">
     <div style="display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;">
-      <span style="font-weight: 700; color: #64748B;">정명고등학교 2027학년도 과목 선택 분석 시스템</span>
+      <span style="font-weight: 700; color: #64748B;">과목 선택 결과 분석 시스템</span>
       <span>•</span>
-      <span class="badge badge-purple" style="font-weight: 700;">제작: 정명고 오인석</span>
+      <span class="badge badge-purple" style="font-weight: 700;">제작자:정명고 오인석</span>
     </div>
     <p style="margin-top: 6px; font-size: 0.8rem; color: #94A3B8;">
       2026학년도 1·2학년 학생 대상 수강신청 데이터 분석 및 교육과정 편성·시간표 블록 설계 지원 도구
@@ -965,6 +966,6 @@
   </footer>
 
   <!-- Main JavaScript Logic -->
-  <script src="app.js?v=20260903_v3"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
