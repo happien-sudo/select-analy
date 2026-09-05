@@ -507,8 +507,16 @@ body {
 .charts-grid {
   display: grid;
   grid-template-columns: 1.25fr 0.95fr 1fr;
-  gap: 20px;
-  margin-bottom: 28px;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.charts-grid .dashboard-card {
+  padding: 16px 20px;
+}
+
+.charts-grid .card-title {
+  font-size: 0.95rem;
 }
 
 .charts-grid.hide-sci4 {
@@ -901,6 +909,85 @@ body {
   background: #F5F3FF !important;
   color: #5B21B6 !important;
   border-bottom: 1px solid #DDD6FE !important;
+}
+
+/* Choice Group Section Headers & Gentle Pastel Row Styling (선택 과목 수별 배경색 구분) */
+.table-group-header td {
+  padding: 10px 18px !important;
+  font-weight: 800 !important;
+  font-size: 0.9rem !important;
+  border-top: 2px solid var(--border-light) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+}
+
+/* [학교 지정 과목] 은은한 뉴트럴 그레이 */
+.table-group-header.group-header-designated td {
+  background: #F8FAFC !important;
+  color: #334155 !important;
+  border-top: 2px solid #CBD5E1 !important;
+  border-left: 5px solid #94A3B8 !important;
+}
+.group-row-designated td {
+  background-color: #FAFAFC;
+}
+.group-row-designated:hover td {
+  background-color: #F1F5F9 !important;
+}
+
+/* [선택 4과목 (택4)] 은은하고 부드러운 파스텔 블루 */
+.table-group-header.group-header-tak4 td {
+  background: #EFF6FF !important;
+  color: #1E40AF !important;
+  border-top: 2px solid #93C5FD !important;
+  border-left: 5px solid #3B82F6 !important;
+}
+.group-row-tak4 td {
+  background-color: #F6F9FE;
+}
+.group-row-tak4:hover td {
+  background-color: #ECF3FD !important;
+}
+
+/* [선택 1과목 (택1)] 은은하고 부드러운 파스텔 웜 앰버/크림 */
+.table-group-header.group-header-tak1 td {
+  background: #FFFBEB !important;
+  color: #92400E !important;
+  border-top: 2px solid #FCD34D !important;
+  border-left: 5px solid #F59E0B !important;
+}
+.group-row-tak1 td {
+  background-color: #FFFDF7;
+}
+.group-row-tak1:hover td {
+  background-color: #FEF8EC !important;
+}
+
+/* [선택 5과목 (택5)] 은은하고 부드러운 파스텔 에메랄드/민트 */
+.table-group-header.group-header-tak5 td {
+  background: #ECFDF5 !important;
+  color: #065F46 !important;
+  border-top: 2px solid #6EE7B7 !important;
+  border-left: 5px solid #10B981 !important;
+}
+.group-row-tak5 td {
+  background-color: #F5FBF8;
+}
+.group-row-tak5:hover td {
+  background-color: #EAF7F0 !important;
+}
+
+/* [선택 2과목 (택2)] 은은하고 부드러운 파스텔 라벤더/퍼플 */
+.table-group-header.group-header-tak2 td {
+  background: #FAF5FF !important;
+  color: #6B21A8 !important;
+  border-top: 2px solid #D8B4FE !important;
+  border-left: 5px solid #A855F7 !important;
+}
+.group-row-tak2 td {
+  background-color: #FAF7FF;
+}
+.group-row-tak2:hover td {
+  background-color: #F3EDFF !important;
 }
 
 /* Print Optimization */

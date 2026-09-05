@@ -36,7 +36,7 @@
             <h1 class="brand-title">과목 선택 결과 분석</h1>
             <span class="badge badge-purple" style="font-size:0.8rem; font-weight:700; padding:4px 10px; border-radius:12px;">제작자:정명고 오인석</span>
           </div>
-          <p class="brand-subtitle">2026학년도 1·2학년 학생 대상 2027학년도 수강신청 데이터 분석 시스템</p>
+          <p class="brand-subtitle" id="app-subtitle">2026학년도 1·2학년 학생 대상 2027학년도 수강신청 데이터 분석 시스템</p>
         </div>
       </div>
       
@@ -61,7 +61,19 @@
           <span id="data-meta-badge" class="badge badge-purple" style="margin-left:6px;">데모 모드</span>
         </div>
 
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px; background:#F8FAFC; border:1px solid #E2E8F0; padding:4px 10px; border-radius:var(--radius-sm);">
+            <i data-lucide="calendar" style="width:14px; height:14px; color:#6366F1;"></i>
+            <label for="select-base-year" style="font-size:0.82rem; font-weight:700; color:#475569; margin:0;">기준 연도:</label>
+            <select id="select-base-year" style="font-size:0.82rem; font-weight:700; color:#1E293B; background:white; border:1px solid #CBD5E1; border-radius:6px; padding:2px 8px; cursor:pointer;">
+              <option value="2025">2025년</option>
+              <option value="2026" selected>2026년 (현재)</option>
+              <option value="2027">2027년</option>
+              <option value="2028">2028년</option>
+              <option value="2029">2029년</option>
+              <option value="2030">2030년</option>
+            </select>
+          </div>
           <button class="btn btn-outline btn-sm" id="btn-load-sample" title="샘플 데이터 다시 불러오기" style="padding:6px 14px; font-size:0.82rem;">
             <i data-lucide="rotate-ccw" style="width:14px; height:14px;"></i>
             샘플 데이터 복원
@@ -111,19 +123,19 @@
     <nav class="nav-tabs" id="cohort-tabs">
       <button class="tab-btn active" data-tab="2026_2_1">
         <i data-lucide="calendar" style="width:16px; height:16px;"></i>
-        2026 입학생 (2학년 1학기)
+        <span id="tab-label-g2-t1">2026 입학생 (2학년 1학기)</span>
       </button>
       <button class="tab-btn" data-tab="2026_2_2">
         <i data-lucide="calendar" style="width:16px; height:16px;"></i>
-        2026 입학생 (2학년 2학기)
+        <span id="tab-label-g2-t2">2026 입학생 (2학년 2학기)</span>
       </button>
       <button class="tab-btn" data-tab="2025_3_1">
         <i data-lucide="award" style="width:16px; height:16px;"></i>
-        2025 입학생 (3학년 1학기)
+        <span id="tab-label-g3-t1">2025 입학생 (3학년 1학기)</span>
       </button>
       <button class="tab-btn" data-tab="2025_3_2">
         <i data-lucide="award" style="width:16px; height:16px;"></i>
-        2025 입학생 (3학년 2학기)
+        <span id="tab-label-g3-t2">2025 입학생 (3학년 2학기)</span>
       </button>
       <button class="tab-btn" data-tab="master_summary">
         <i data-lucide="layout-grid" style="width:16px; height:16px;"></i>
@@ -200,7 +212,7 @@
             </h2>
             <span class="badge badge-purple" id="chart-top-count-badge">상위 과목</span>
           </div>
-          <div style="height: 320px; position: relative;">
+          <div style="height: 210px; position: relative;">
             <canvas id="subjectBarChart"></canvas>
           </div>
         </div>
@@ -208,23 +220,23 @@
         <!-- 2. 4-Science Calm Status Card (Placed in the middle, tone balanced) -->
         <!-- 2. Science Focus Card (Placed in the middle, tone balanced) -->
         <div class="dashboard-card sci4-middle-card" id="sci4-banner" style="display: none;">
-          <div class="card-header-row" style="margin-bottom: 12px;">
-            <h2 class="card-title" style="font-size: 0.98rem;" id="sci-focus-title">
-              <i data-lucide="atom" style="width:19px; height:19px; color:#E11D48;"></i>
+          <div class="card-header-row" style="margin-bottom: 8px;">
+            <h2 class="card-title" style="font-size: 0.92rem;" id="sci-focus-title">
+              <i data-lucide="atom" style="width:18px; height:18px; color:#E11D48;"></i>
               <span id="sci-focus-title-text">물·화·생·지 4과목 올선택 현황</span>
             </h2>
             <span class="badge badge-pink" id="sci-focus-badge">자연·공학 집중</span>
           </div>
           <div class="sci4-middle-body">
-            <div class="sci4-num-wrap">
+            <div class="sci4-num-wrap" style="padding: 4px 0;">
               <div class="sci4-num" id="sci4-count">0명</div>
               <div class="sci4-rate" id="sci4-percent">전체 학생의 0.0%</div>
             </div>
-            <div class="sci4-desc-box" id="sci-focus-desc">
+            <div class="sci4-desc-box" id="sci-focus-desc" style="padding: 8px 10px; font-size: 0.78rem; line-height: 1.4;">
               2학년 1학기 <strong>선택 4과목</strong> 중 4대 기초 과학(물리학·화학·생명과학·지구과학)을 모두 수강 신청한 학생 현황입니다.
             </div>
-            <button class="btn btn-pastel-pink btn-sm" id="btn-view-sci4-students" style="width: 100%; margin-top: 14px;">
-              <i data-lucide="list-filter" style="width:15px; height:15px;"></i>
+            <button class="btn btn-pastel-pink btn-sm" id="btn-view-sci4-students" style="width: 100%; margin-top: 10px; padding: 6px 10px; font-size: 0.8rem;">
+              <i data-lucide="list-filter" style="width:14px; height:14px;"></i>
               <span id="sci-focus-btn-text">집중 선택자 명단 확인</span>
             </button>
           </div>
@@ -239,7 +251,7 @@
             </h2>
             <span class="badge badge-blue">영역 분포</span>
           </div>
-          <div style="height: 320px; position: relative; display:flex; align-items:center; justify-content:center;">
+          <div style="height: 210px; position: relative; display:flex; align-items:center; justify-content:center;">
             <canvas id="categoryDonutChart"></canvas>
           </div>
         </div>
@@ -337,7 +349,7 @@
       <section class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 24px;">
         <div class="kpi-card purple">
           <div class="kpi-top">
-            <span class="kpi-label">2026 입학생 (2학년 1학기)</span>
+            <span class="kpi-label" id="master-kpi-label-2026-1">2026 입학생 (2학년 1학기)</span>
             <div class="kpi-icon-wrap" style="background:var(--pastel-purple); color:var(--pastel-purple-text);">
               <i data-lucide="calendar" style="width:20px; height:20px;"></i>
             </div>
@@ -348,7 +360,7 @@
 
         <div class="kpi-card blue">
           <div class="kpi-top">
-            <span class="kpi-label">2026 입학생 (2학년 2학기)</span>
+            <span class="kpi-label" id="master-kpi-label-2026-2">2026 입학생 (2학년 2학기)</span>
             <div class="kpi-icon-wrap" style="background:var(--pastel-blue); color:var(--pastel-blue-text);">
               <i data-lucide="calendar" style="width:20px; height:20px;"></i>
             </div>
@@ -359,7 +371,7 @@
 
         <div class="kpi-card green">
           <div class="kpi-top">
-            <span class="kpi-label">2025 입학생 (3학년 1학기)</span>
+            <span class="kpi-label" id="master-kpi-label-2025-1">2025 입학생 (3학년 1학기)</span>
             <div class="kpi-icon-wrap" style="background:var(--pastel-green); color:var(--pastel-green-text);">
               <i data-lucide="award" style="width:20px; height:20px;"></i>
             </div>
@@ -370,7 +382,7 @@
 
         <div class="kpi-card amber">
           <div class="kpi-top">
-            <span class="kpi-label">2025 입학생 (3학년 2학기)</span>
+            <span class="kpi-label" id="master-kpi-label-2025-2">2025 입학생 (3학년 2학기)</span>
             <div class="kpi-icon-wrap" style="background:var(--pastel-amber); color:var(--pastel-amber-text);">
               <i data-lucide="award" style="width:20px; height:20px;"></i>
             </div>
@@ -960,7 +972,7 @@
       <span>•</span>
       <span class="badge badge-purple" style="font-weight: 700;">제작자:정명고 오인석</span>
     </div>
-    <p style="margin-top: 6px; font-size: 0.8rem; color: #94A3B8;">
+    <p style="margin-top: 6px; font-size: 0.8rem; color: #94A3B8;" id="app-footer-desc">
       2026학년도 1·2학년 학생 대상 수강신청 데이터 분석 및 교육과정 편성·시간표 블록 설계 지원 도구
     </p>
   </footer>
