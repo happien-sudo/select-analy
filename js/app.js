@@ -2287,9 +2287,9 @@ function setupModalClosers() {
 }
 
 // -------------------------------------------------------------
-// A4 Portrait PDF Export Functionality (A4 세로 맞춤 PDF 보고서)
+// A4 Portrait PDF Export Functionality (A4 세로 맞춤 고화질 PDF 보고서)
 // -------------------------------------------------------------
-function downloadCohortPdfReport(cohortKey) {
+async function downloadCohortPdfReport(cohortKey) {
   cohortKey = cohortKey || state.activeTab;
   const cohort = state.data[cohortKey];
   if (!cohort || !cohort.subjects || cohort.subjects.length === 0) {
@@ -2338,64 +2338,7 @@ function downloadCohortPdfReport(cohortKey) {
     return a.localeCompare(b, 'ko');
   });
 
-  // 2. Build Visible Modal Overlay Container (Ensures html2canvas captures 100% of DOM content at real coordinates)
-  const overlay = document.createElement('div');
-  overlay.id = 'pdf-generation-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(15, 23, 42, 0.78);
-    z-index: 999999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 24px 10px;
-    overflow-y: auto;
-    box-sizing: border-box;
-  `;
-
-  // Status banner on top of overlay
-  const statusBanner = document.createElement('div');
-  statusBanner.style.cssText = `
-    background: #ffffff;
-    padding: 10px 22px;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-    font-size: 13.5px;
-    font-weight: 700;
-    color: #4338CA;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  `;
-  statusBanner.innerHTML = `
-    <span style="display:inline-block; width:16px; height:16px; border:2.5px solid #C7D2FE; border-top-color:#4F46E5; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
-    <span>📄 [${cleanCohortName}] A4 세로 규격 공식 보고서 PDF 생성 중... 잠시만 기다려주세요.</span>
-  `;
-  overlay.appendChild(statusBanner);
-
-  // The actual printable report container inside overlay (Width: 710px to perfectly fit A4 width 190mm at 96 DPI)
-  const reportWrap = document.createElement('div');
-  reportWrap.id = 'temp-pdf-report-wrapper';
-  reportWrap.style.cssText = `
-    width: 710px;
-    background: #ffffff;
-    color: #1e293b;
-    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
-    font-size: 10px;
-    line-height: 1.32;
-    padding: 18px 20px;
-    box-sizing: border-box;
-    border-radius: 4px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  `;
-
-  // Build rows HTML
+  // 2. Build Rows HTML
   let tableRowsHtml = '';
   let globalRank = 1;
 
@@ -2410,7 +2353,7 @@ function downloadCohortPdfReport(cohortKey) {
     `;
     designatedSubjects.forEach(sub => {
       tableRowsHtml += `
-        <tr style="border-bottom:1px solid #e2e8f0;">
+        <tr style="border-bottom:1px solid #e2e8f0; background:#ffffff;">
           <td style="padding:4px 5px; text-align:center; color:#64748b;">${globalRank++}</td>
           <td style="padding:4px 5px; text-align:center;"><span style="display:inline-block; padding:1px 5px; border-radius:3px; font-size:9.5px; background:#f1f5f9; color:#475569;">${sub.category}</span></td>
           <td style="padding:4px 6px; font-weight:700; color:#1e293b;">${sub.name}</td>
@@ -2453,7 +2396,7 @@ function downloadCohortPdfReport(cohortKey) {
       const ratio = (sub.count / 25).toFixed(2);
 
       tableRowsHtml += `
-        <tr style="border-bottom:1px solid #e2e8f0; ${isDiff ? 'background:#faf5ff;' : ''}">
+        <tr style="border-bottom:1px solid #e2e8f0; ${isDiff ? 'background:#faf5ff;' : 'background:#ffffff;'}">
           <td style="padding:4px 5px; text-align:center; color:#64748b;">${globalRank++}</td>
           <td style="padding:4px 5px; text-align:center;"><span style="display:inline-block; padding:1px 5px; border-radius:3px; font-size:9.5px; background:#e0e7ff; color:#3730a3;">${sub.category}</span></td>
           <td style="padding:4px 6px; font-weight:700; color:#1e293b;">${sub.name}</td>
@@ -2500,7 +2443,51 @@ function downloadCohortPdfReport(cohortKey) {
     </tr>
   `;
 
-  // Construct complete document
+  // 3. Show modern floating notification badge
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.id = 'pdf-loading-indicator';
+  loadingIndicator.style.cssText = `
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1E1B4B;
+    color: #ffffff;
+    padding: 12px 26px;
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    z-index: 1000000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: Pretendard, -apple-system, sans-serif;
+  `;
+  loadingIndicator.innerHTML = `
+    <span style="display:inline-block; width:16px; height:16px; border:2.5px solid #C7D2FE; border-top-color:#818CF8; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+    <span>📄 [${cleanCohortName}] 고화질 A4 PDF 보고서 생성 중...</span>
+  `;
+  document.body.appendChild(loadingIndicator);
+
+  // 4. Build Report Staging Container in normal document flow
+  const reportWrap = document.createElement('div');
+  reportWrap.id = 'temp-pdf-report-wrapper';
+  reportWrap.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 750px;
+    background: #ffffff;
+    color: #1e293b;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+    font-size: 10px;
+    line-height: 1.32;
+    padding: 20px 24px;
+    box-sizing: border-box;
+    z-index: 999999;
+  `;
+
   reportWrap.innerHTML = `
     <!-- Top Header Bar with School Stamp/Signature box -->
     <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:2px solid #1e293b; padding-bottom:10px;">
@@ -2583,49 +2570,119 @@ function downloadCohortPdfReport(cohortKey) {
     </div>
   `;
 
-  overlay.appendChild(reportWrap);
-  document.body.appendChild(overlay);
+  document.body.appendChild(reportWrap);
 
-  // Scroll overlay to top
-  overlay.scrollTop = 0;
+  // Save current scroll position
+  const originalScrollX = window.scrollX || window.pageXOffset || 0;
+  const originalScrollY = window.scrollY || window.pageYOffset || 0;
 
-  // 3. Trigger html2pdf export with A4 portrait settings
-  if (window.html2pdf) {
-    const opt = {
-      margin: [8, 8, 8, 8],
-      filename: `정명고_과목선택결과_${cleanCohortName.replace(/[\s\(\)]/g, '_')}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
-        letterRendering: true, 
+  // Scroll to top to eliminate all scroll coordinate offset bugs
+  window.scrollTo(0, 0);
+
+  try {
+    // Wait for the browser to layout, render fonts, and paint pixels into the DOM
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    const pdfFilename = `정명고_과목선택결과_${cleanCohortName.replace(/[\s\(\)]/g, '_')}.pdf`;
+
+    // STRATEGY A: Direct High-Resolution Canvas + jsPDF (Vector-sharp, zero blank page bugs)
+    if (window.html2canvas && (window.jspdf || window.jsPDF)) {
+      const canvas = await window.html2canvas(reportWrap, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
         logging: false,
         scrollX: 0,
-        scrollY: 0,
-        windowWidth: 1024
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+        scrollY: 0
+      });
 
-    html2pdf().set(opt).from(reportWrap).save().then(() => {
-      if (overlay.parentNode) {
-        document.body.removeChild(overlay);
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error('Canvas capture returned empty dimensions');
       }
+
+      const jsPdfClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+      const pdf = new jsPdfClass('p', 'mm', 'a4');
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const margin = 8;
+      const contentWidth = pdfWidth - (margin * 2); // 194 mm
+      const pageHeightMm = pdfHeight - (margin * 2); // 281 mm
+
+      const totalHeightMm = (canvas.height * contentWidth) / canvas.width;
+
+      if (totalHeightMm <= pageHeightMm) {
+        // Fits perfectly on single page
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, totalHeightMm);
+      } else {
+        // Multi-page slicing: precisely slices the canvas without overlap or blank white pages
+        const canvasPageHeight = Math.floor((pageHeightMm * canvas.width) / contentWidth);
+        let currentY = 0;
+        let pageNum = 0;
+
+        while (currentY < canvas.height) {
+          if (pageNum > 0) {
+            pdf.addPage();
+          }
+          const sliceHeight = Math.min(canvasPageHeight, canvas.height - currentY);
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sliceHeight;
+          const ctx = pageCanvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(canvas, 0, currentY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+          const sliceImg = pageCanvas.toDataURL('image/jpeg', 0.98);
+          const sliceMm = (sliceHeight * contentWidth) / canvas.width;
+          pdf.addImage(sliceImg, 'JPEG', margin, margin, contentWidth, sliceMm);
+
+          currentY += sliceHeight;
+          pageNum++;
+        }
+      }
+
+      pdf.save(pdfFilename);
       showAlertModal('PDF 다운로드 완료', `[${cleanCohortName}] A4 세로 규격 공식 보고서 PDF 파일이 정상적으로 다운로드되었습니다.`, 'success');
-    }).catch(err => {
-      console.error('html2pdf generation error, falling back to window.print():', err);
-      if (overlay.parentNode) {
-        document.body.removeChild(overlay);
-      }
-      showAlertModal('다운로드 안내', 'PDF 라이브러리 처리 중 인쇄 모드로 전환합니다.', 'info');
-      window.print();
-    });
-  } else {
-    // Fallback if CDN failed
-    if (overlay.parentNode) {
-      document.body.removeChild(overlay);
     }
+    // STRATEGY B: html2pdf fallback
+    else if (window.html2pdf) {
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: pdfFilename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          backgroundColor: '#ffffff',
+          logging: false,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      };
+
+      await window.html2pdf().set(opt).from(reportWrap).save();
+      showAlertModal('PDF 다운로드 완료', `[${cleanCohortName}] A4 세로 규격 공식 보고서 PDF 파일이 정상적으로 다운로드되었습니다.`, 'success');
+    } else {
+      // STRATEGY C: Browser Print Dialog fallback
+      showAlertModal('다운로드 안내', 'PDF 라이브러리 준비 중입니다. 인쇄 창에서 대상 프린터를 [PDF로 저장]으로 선택해주세요.', 'info');
+      window.print();
+    }
+  } catch (err) {
+    console.error('PDF generation error, falling back to window.print():', err);
+    showAlertModal('다운로드 안내', '고화질 PDF 생성 처리 중 브라우저 인쇄 모드로 안전하게 전환합니다. 대상 프린터를 [PDF로 저장]으로 선택하시면 동일하게 다운로드됩니다.', 'info');
     window.print();
+  } finally {
+    // Cleanup DOM elements and restore scroll
+    if (reportWrap && reportWrap.parentNode) {
+      reportWrap.parentNode.removeChild(reportWrap);
+    }
+    if (loadingIndicator && loadingIndicator.parentNode) {
+      loadingIndicator.parentNode.removeChild(loadingIndicator);
+    }
+    window.scrollTo(originalScrollX, originalScrollY);
   }
 }
 
@@ -3487,15 +3544,6 @@ function parseSchoolExcelSheet(sheetName, sheetIndex, jsonRows) {
 
   // 1. Determine Target Cohort based on Sheet Name, Index, or Content
   const rawClean = String(sheetName || '').replace(/\s+/g, '');
-
-  // Auto-detect base year from sheet name if present (e.g. '2027입학생' or '2027_2_1')
-  const yearMatch = rawClean.match(/(20\d{2})입학생/) || rawClean.match(/^(20\d{2})_/);
-  if (yearMatch && yearMatch[1]) {
-    const detectedYear = parseInt(yearMatch[1], 10);
-    if (detectedYear >= 2020 && detectedYear <= 2035 && detectedYear !== state.baseYear) {
-      setBaseYear(detectedYear, false);
-    }
-  }
 
   let cohortKey = '';
 
