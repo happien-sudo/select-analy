@@ -1511,7 +1511,7 @@ function renderSubjectTable(subjects, totalCount) {
         <td colspan="2" style="color:#475569; font-size:0.82rem; vertical-align:middle;">
           <span style="display:inline-flex; align-items:center; gap:4px; font-weight:600;">
             <i data-lucide="check-circle-2" style="width:14px; height:14px; color:#10B981;"></i>
-            ${gName} 확정 분반: <strong style="color:#6D28D9;" data-group-note="${gName}">${groupManualSections}개 반</strong> (기준: ${simSize}명)
+            ${gName} 확정 분반: <strong style="color:#6D28D9;" data-group-note="${gName}">${groupManualSections}개 반</strong>
           </span>
         </td>
       `;
@@ -2479,7 +2479,7 @@ function downloadCohortPdfReport(cohortKey) {
         <td style="padding:4px 5px; text-align:center; font-weight:700; color:#334155; background:#f1f5f9;">${grpRatio}</td>
         <td style="padding:4px 5px; text-align:center; font-weight:900; color:#4338ca; background:#eef2ff;">${grpCalc}개 반</td>
         <td style="padding:4px 5px; text-align:center; font-weight:900; color:#6d28d9; background:#ede9fe;">${grpManual}개 반</td>
-        <td style="padding:4px 5px; text-align:center; font-size:9.5px; color:#64748b;">(기준: ${simSize}명)</td>
+        <td style="padding:4px 5px; text-align:center; font-size:9.5px; color:#4338ca; font-weight:600;">확정</td>
       </tr>
     `;
   });
