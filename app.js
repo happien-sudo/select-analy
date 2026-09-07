@@ -207,8 +207,49 @@ const state = {
   charts: {
     bar: null,
     donut: null
-  }
+  },
+  manualSections: {} // Key: `${cohortKey}_${subjectName}` => number
 };
+
+// Load manual sections from localStorage if available
+try {
+  const savedManual = localStorage.getItem('cul_select_manual_sections');
+  if (savedManual) {
+    state.manualSections = JSON.parse(savedManual) || {};
+  }
+} catch (e) {
+  console.warn('LocalStorage error for manualSections:', e);
+}
+
+function saveManualSectionsToStorage() {
+  try {
+    localStorage.setItem('cul_select_manual_sections', JSON.stringify(state.manualSections));
+  } catch (e) {}
+}
+
+function getSubjectManualSections(cohortKey, subjectName, fallbackCalculated) {
+  const key = `${cohortKey}_${subjectName}`;
+  if (state.manualSections && typeof state.manualSections[key] === 'number') {
+    return state.manualSections[key];
+  }
+  return fallbackCalculated;
+}
+
+function setSubjectManualSections(cohortKey, subjectName, val) {
+  const key = `${cohortKey}_${subjectName}`;
+  state.manualSections[key] = Math.max(0, parseInt(val, 10) || 0);
+  saveManualSectionsToStorage();
+}
+
+function resetCohortManualSections(cohortKey) {
+  if (!state.manualSections) return;
+  Object.keys(state.manualSections).forEach(k => {
+    if (k.startsWith(`${cohortKey}_`)) {
+      delete state.manualSections[k];
+    }
+  });
+  saveManualSectionsToStorage();
+}
 
 // Function to update Base Year dynamically (2026 -> 2027 etc.)
 function setBaseYear(newYear, refreshUI = true) {
@@ -1216,13 +1257,13 @@ function renderSubjectTable(subjects, totalCount) {
   const badgesEl = document.getElementById('table-group-section-badges');
   if (badgesEl) badgesEl.innerHTML = '';
 
-  const simHeaderTh = document.querySelector('#subject-table thead th:nth-child(7)');
+  const simHeaderTh = document.getElementById('th-sim-sections') || document.querySelector('#subject-table thead th:nth-child(8)');
   if (simHeaderTh) {
-    simHeaderTh.textContent = `예상 분반 수 (${state.simClassSize || 25}명 기준)`;
+    simHeaderTh.textContent = `예상 분반 (${state.simClassSize || 25}명 기준)`;
   }
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#94A3B8;">조건에 맞는 과목이 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:32px; color:#94A3B8;">조건에 맞는 과목이 없습니다.</td></tr>`;
     return;
   }
 
@@ -1246,15 +1287,6 @@ function renderSubjectTable(subjects, totalCount) {
     return 'badge-gray';
   };
 
-  const getCategoryKoreanName = (category) => {
-    if (category === '기초') return '기초 교과 (국어·수학·영어)';
-    if (category === '사회') return '탐구 교과 (사회·역사·도덕)';
-    if (category === '과학') return '탐구 교과 (과학)';
-    if (category === '생활교양') return '생활·교양 교과 (외국어·정보·한문·교양)';
-    if (category === '예체능' || category === '체육·예술') return '체육·예술 교과';
-    return `${category} 교과`;
-  };
-
   // Helper function to render a single subject row
   const renderRow = (sub, rowIdx, isDesignated, rowClass = '') => {
     const tr = document.createElement('tr');
@@ -1270,8 +1302,11 @@ function renderSubjectTable(subjects, totalCount) {
     else if (sub.badge === '택1') groupBadgeClass = 'badge-amber';
     else if (sub.badge === '택2') groupBadgeClass = 'badge-purple';
 
-    // 25명 기준 반올림 (학교 지정과목은 분반 산출 제외 '-')
-    const sections = isDesignated ? '-' : Math.round(sub.count / (state.simClassSize || 25));
+    // 25명 기준 분반 지수 및 반올림 분반 수
+    const ratioVal = isDesignated ? '-' : (sub.count / 25).toFixed(2);
+    const calcSections = isDesignated ? '-' : Math.round(sub.count / (state.simClassSize || 25));
+    const manualVal = isDesignated ? '-' : getSubjectManualSections(state.activeTab, sub.name, calcSections);
+    const isModified = !isDesignated && (manualVal !== calcSections);
 
     let statusBadge = `<span class="badge badge-green">개설 안정</span>`;
     if (isDesignated) {
@@ -1288,6 +1323,20 @@ function renderSubjectTable(subjects, totalCount) {
 
     const isSci4 = ['물리학', '화학', '생명과학', '지구과학'].includes(sub.name) && (state.activeTab === '2026_2_1' || state.activeTab.endsWith('_2_1'));
 
+    const manualInputHtml = isDesignated
+      ? `<span style="color:#94A3B8;">-</span>`
+      : `<div style="display:flex; align-items:center; justify-content:center; gap:3px;">
+          <input type="number" min="0" max="50" step="1" 
+                 class="manual-section-input ${isModified ? 'is-modified' : ''}" 
+                 data-cohort="${state.activeTab}" 
+                 data-group="${sub.group || ''}"
+                 data-sub="${sub.name}" 
+                 data-calc="${calcSections}" 
+                 value="${manualVal}" 
+                 title="원하는 분반 수를 직접 입력하세요 (합계 실시간 변환)">
+          <span style="font-size:0.8rem; font-weight:700; color:#475569;">반</span>
+        </div>`;
+
     tr.innerHTML = `
       <td style="text-align:center; font-weight:700; color:#64748B;">${rowIdx}</td>
       <td><span class="badge ${catBadgeClass}">${sub.category}</span></td>
@@ -1300,8 +1349,14 @@ function renderSubjectTable(subjects, totalCount) {
       <td><span class="badge ${groupBadgeClass}">${sub.group || sub.badge || (isDesignated ? '학교지정' : '학생선택')}</span></td>
       <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">${sub.units || 3}학점</td>
       <td style="text-align:right; font-weight:800; color:#0F172A; font-size:1rem; white-space:nowrap;">${sub.count}명</td>
+      <td style="text-align:center; font-weight:700; color:#475569; font-size:0.92rem; white-space:nowrap; background:#F8FAFC;" title="${sub.count}명 ÷ 25 = ${ratioVal}">
+        ${ratioVal}
+      </td>
       <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">
-        ${isDesignated ? '<span style="color:#94A3B8; font-weight:normal;">-</span>' : `${sections}개 분반`}
+        ${isDesignated ? '<span style="color:#94A3B8; font-weight:normal;">-</span>' : `${calcSections}개 반`}
+      </td>
+      <td style="text-align:center; white-space:nowrap;">
+        ${manualInputHtml}
       </td>
       <td>
         <div class="progress-bar-wrap">
@@ -1325,7 +1380,7 @@ function renderSubjectTable(subjects, totalCount) {
     const secTr = document.createElement('tr');
     secTr.className = 'table-group-header group-header-designated';
     secTr.innerHTML = `
-      <td colspan="9">
+      <td colspan="11">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
           <span>
             <i data-lucide="lock" style="width:16px; height:16px; vertical-align:middle; margin-right:6px; color:#475569;"></i>
@@ -1369,7 +1424,8 @@ function renderSubjectTable(subjects, totalCount) {
     });
 
     const simSize = state.simClassSize || 25;
-    let grandElectiveSections = 0;
+    let grandElectiveCalcSections = 0;
+    let grandElectiveManualSections = 0;
     let grandElectiveCount = 0;
     const groupSummaries = [];
 
@@ -1378,16 +1434,21 @@ function renderSubjectTable(subjects, totalCount) {
       const repBadge = subsInGroup[0]?.badge || '';
       const styleMeta = getGroupStyleMeta(gName, repBadge);
 
-      // 선택군 내 과목별 예상 분반 수 합계 및 선택인원 합계
-      const groupSections = subsInGroup.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+      // 선택군 내 예상 분반 합계 및 확정(직접입력) 분반 합계
+      const groupCalcSections = subsInGroup.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+      const groupManualSections = subsInGroup.reduce((sum, s) => sum + getSubjectManualSections(state.activeTab, s.name, Math.round(s.count / simSize)), 0);
       const groupStudents = subsInGroup.reduce((sum, s) => sum + (s.count || 0), 0);
+      const groupRatio = (groupStudents / 25).toFixed(2);
 
-      grandElectiveSections += groupSections;
+      grandElectiveCalcSections += groupCalcSections;
+      grandElectiveManualSections += groupManualSections;
       grandElectiveCount += groupStudents;
+
       groupSummaries.push({
         name: gName,
         badge: repBadge,
-        sections: groupSections,
+        calcSections: groupCalcSections,
+        manualSections: groupManualSections,
         count: groupStudents,
         subsCount: subsInGroup.length,
         badgeClass: styleMeta.badgeClass
@@ -1397,7 +1458,7 @@ function renderSubjectTable(subjects, totalCount) {
       const grpTr = document.createElement('tr');
       grpTr.className = `table-group-header ${styleMeta.headerClass}`;
       grpTr.innerHTML = `
-        <td colspan="9">
+        <td colspan="11">
           <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <i data-lucide="${styleMeta.icon}" style="width:16px; height:16px; vertical-align:middle;"></i>
@@ -1406,9 +1467,11 @@ function renderSubjectTable(subjects, totalCount) {
             </div>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span class="badge ${styleMeta.badgeClass}" style="font-weight:700;">총 ${subsInGroup.length}개 과목</span>
-              <span class="badge" style="font-weight:800; font-size:0.85rem; padding:4px 10px; background:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; display:inline-flex; align-items:center; gap:4px;">
+              <span class="badge" data-group-badge="${gName}" style="font-weight:800; font-size:0.85rem; padding:4px 10px; background:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; display:inline-flex; align-items:center; gap:4px;">
                 <i data-lucide="layers" style="width:13px; height:13px;"></i>
-                예상 분반 수 합계: <strong style="font-size:0.95rem; color:#3730A3;">${groupSections}개 반</strong>
+                ${groupManualSections !== groupCalcSections
+                  ? `예상: <strong>${groupCalcSections}개 반</strong> → 확정: <strong style="color:#6D28D9;">${groupManualSections}개 반</strong>`
+                  : `확정 분반 수 합계: <strong>${groupManualSections}개 반</strong>`}
               </span>
             </div>
           </div>
@@ -1436,13 +1499,19 @@ function renderSubjectTable(subjects, totalCount) {
         <td style="text-align:right; font-weight:800; color:#0F172A; font-size:0.95rem; white-space:nowrap;">
           ${groupStudents.toLocaleString()}명
         </td>
+        <td style="text-align:center; font-weight:700; color:#334155; font-size:0.9rem; white-space:nowrap; background:#F1F5F9;" title="${groupStudents}명 ÷ 25 = ${groupRatio}">
+          ${groupRatio}
+        </td>
         <td style="text-align:center; white-space:nowrap;" class="subtotal-section-cell">
-          ${groupSections}개 반
+          ${groupCalcSections}개 반
+        </td>
+        <td style="text-align:center; white-space:nowrap;" class="subtotal-manual-cell" data-group-manual="${gName}">
+          ${groupManualSections}개 반
         </td>
         <td colspan="2" style="color:#475569; font-size:0.82rem; vertical-align:middle;">
           <span style="display:inline-flex; align-items:center; gap:4px; font-weight:600;">
             <i data-lucide="check-circle-2" style="width:14px; height:14px; color:#10B981;"></i>
-            ${gName} 분반 합계: <strong style="color:#4338CA;">${groupSections}개 반</strong> (${simSize}명 기준)
+            ${gName} 확정 분반: <strong style="color:#6D28D9;" data-group-note="${gName}">${groupManualSections}개 반</strong> (기준: ${simSize}명)
           </span>
         </td>
       `;
@@ -1453,24 +1522,31 @@ function renderSubjectTable(subjects, totalCount) {
     if (sortedGroupNames.length > 0) {
       const grandTr = document.createElement('tr');
       grandTr.className = 'table-grand-total-row';
-      const detailBreakdown = groupSummaries.map(g => `${g.name}: ${g.sections}개반`).join(' + ');
+      const detailBreakdown = groupSummaries.map(g => `${g.name}: ${g.manualSections}개반`).join(' + ');
+      const grandRatio = (grandElectiveCount / 25).toFixed(2);
 
       grandTr.innerHTML = `
         <td style="text-align:center; font-weight:800; color:#3730A3; font-size:0.85rem;">총계</td>
         <td style="text-align:center;"><span class="badge badge-purple" style="font-size:0.75rem;">학생선택</span></td>
         <td colspan="2" style="color:#1E1B4B; font-weight:800; font-size:0.95rem;">
           🎯 <strong>학생선택 과목 전체 분반 총계</strong>
-          <span style="font-size:0.8rem; font-weight:normal; color:#4F46E5; margin-left:8px;">(${detailBreakdown})</span>
+          <span style="font-size:0.8rem; font-weight:normal; color:#4F46E5; margin-left:8px;" id="grand-breakdown-text">(${detailBreakdown})</span>
         </td>
         <td style="text-align:center; color:#64748B; font-size:0.82rem;">-</td>
         <td style="text-align:right; font-weight:900; color:#1E1B4B; font-size:1rem; white-space:nowrap;">
           ${grandElectiveCount.toLocaleString()}명
         </td>
+        <td style="text-align:center; font-weight:800; color:#312E81; font-size:0.95rem; white-space:nowrap; background:#E0E7FF;" title="${grandElectiveCount}명 ÷ 25 = ${grandRatio}">
+          ${grandRatio}
+        </td>
         <td style="text-align:center; white-space:nowrap;" class="grand-total-section-cell">
-          ${grandElectiveSections}개 반
+          ${grandElectiveCalcSections}개 반
+        </td>
+        <td style="text-align:center; white-space:nowrap;" class="grand-manual-cell" id="grand-manual-sections">
+          ${grandElectiveManualSections}개 반
         </td>
         <td colspan="2" style="color:#3730A3; font-size:0.85rem; font-weight:700;">
-          전체 학생선택 예상 분반: <strong style="color:#1E1B4B; font-size:1rem;">${grandElectiveSections}개 반</strong> (개설 학급 합계)
+          전체 학생선택 확정 분반: <strong style="color:#4C1D95; font-size:1.05rem;" id="grand-note-manual">${grandElectiveManualSections}개 반</strong>
         </td>
       `;
       tbody.appendChild(grandTr);
@@ -1483,21 +1559,39 @@ function renderSubjectTable(subjects, totalCount) {
         badge.className = `badge ${g.badgeClass}`;
         badge.style.fontWeight = '700';
         badge.style.fontSize = '0.8rem';
-        badge.textContent = `${g.name}: ${g.sections}개 반`;
+        badge.setAttribute('data-top-badge', g.name);
+        badge.textContent = `${g.name}: 확정 ${g.manualSections}개 반`;
         badgesEl.appendChild(badge);
       });
 
       if (groupSummaries.length > 1) {
         const totalBadge = document.createElement('span');
         totalBadge.className = 'badge badge-purple';
+        totalBadge.id = 'top-grand-manual-badge';
         totalBadge.style.fontWeight = '800';
         totalBadge.style.fontSize = '0.8rem';
         totalBadge.style.border = '1px solid #C4B5FD';
-        totalBadge.textContent = `선택 분반 총계: ${grandElectiveSections}개 반`;
+        totalBadge.textContent = `선택 분반 총계: ${grandElectiveManualSections}개 반`;
         badgesEl.appendChild(totalBadge);
       }
     }
   }
+
+  // 6. 실시간 분반 직접 입력 이벤트 바인딩 (실시간 소계/총계/배지 자동 변환)
+  tbody.querySelectorAll('.manual-section-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const subName = input.getAttribute('data-sub');
+      const calcVal = parseInt(input.getAttribute('data-calc'), 10) || 0;
+      const rawVal = parseInt(input.value, 10);
+      const val = isNaN(rawVal) ? 0 : Math.max(0, rawVal);
+
+      setSubjectManualSections(state.activeTab, subName, val);
+      input.classList.toggle('is-modified', val !== calcVal);
+
+      // 테이블 내 실시간 합계 재계산
+      updateTableManualTotals();
+    });
+  });
 
   if (window.lucide) {
     window.lucide.createIcons();
@@ -1509,6 +1603,83 @@ function renderSubjectTable(subjects, totalCount) {
       openSubjectStudentsModal(subName);
     });
   });
+}
+
+// 실시간 직접 입력 분반 수 소계/총계/배지 동적 갱신 함수
+function updateTableManualTotals() {
+  const cohortKey = state.activeTab;
+  const currentCohortDef = CURRICULUM_DEFINITION[cohortKey];
+  const simSize = state.simClassSize || 25;
+
+  const groupTotals = {};
+  const groupCalcs = {};
+  let grandManual = 0;
+  let grandCalc = 0;
+
+  document.querySelectorAll('#subject-table-body .manual-section-input').forEach(input => {
+    const gName = input.getAttribute('data-group') || '학생선택 과목';
+    const calcVal = parseInt(input.getAttribute('data-calc'), 10) || 0;
+    const val = Math.max(0, parseInt(input.value, 10) || 0);
+
+    if (!groupTotals[gName]) {
+      groupTotals[gName] = 0;
+      groupCalcs[gName] = 0;
+    }
+    groupTotals[gName] += val;
+    groupCalcs[gName] += calcVal;
+    grandManual += val;
+    grandCalc += calcVal;
+  });
+
+  // 1. 각 그룹 소계 셀 및 헤더 배지 갱신
+  Object.keys(groupTotals).forEach(gName => {
+    const manVal = groupTotals[gName];
+    const calcVal = groupCalcs[gName];
+
+    // Subtotal cell
+    const subCell = document.querySelector(`[data-group-manual="${gName}"]`);
+    if (subCell) subCell.textContent = `${manVal}개 반`;
+
+    // Subtotal note
+    const subNote = document.querySelector(`[data-group-note="${gName}"]`);
+    if (subNote) subNote.textContent = `${manVal}개 반`;
+
+    // Group header badge
+    const grpBadge = document.querySelector(`[data-group-badge="${gName}"]`);
+    if (grpBadge) {
+      grpBadge.innerHTML = `<i data-lucide="layers" style="width:13px; height:13px;"></i> ${
+        manVal !== calcVal 
+          ? `예상: <strong>${calcVal}개 반</strong> → 확정: <strong style="color:#6D28D9;">${manVal}개 반</strong>`
+          : `확정 분반 수 합계: <strong>${manVal}개 반</strong>`
+      }`;
+    }
+
+    // Top summary pill badge
+    const topBadge = document.querySelector(`[data-top-badge="${gName}"]`);
+    if (topBadge) {
+      topBadge.textContent = `${gName}: 확정 ${manVal}개 반`;
+    }
+  });
+
+  // 2. 전체 총계 셀 및 설명 갱신
+  const grandCell = document.getElementById('grand-manual-sections');
+  if (grandCell) grandCell.textContent = `${grandManual}개 반`;
+
+  const grandNote = document.getElementById('grand-note-manual');
+  if (grandNote) grandNote.textContent = `${grandManual}개 반`;
+
+  const topGrandBadge = document.getElementById('top-grand-manual-badge');
+  if (topGrandBadge) topGrandBadge.textContent = `선택 분반 총계: ${grandManual}개 반`;
+
+  const grandBreakdown = document.getElementById('grand-breakdown-text');
+  if (grandBreakdown) {
+    const breakdownStr = Object.keys(groupTotals).map(g => `${g}: ${groupTotals[g]}개반`).join(' + ');
+    grandBreakdown.textContent = `(${breakdownStr})`;
+  }
+
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
 }
 
 // -------------------------------------------------------------
@@ -2116,7 +2287,350 @@ function setupModalClosers() {
 }
 
 // -------------------------------------------------------------
-// Excel Export Functionality
+// A4 Portrait PDF Export Functionality (A4 세로 맞춤 PDF 보고서)
+// -------------------------------------------------------------
+function downloadCohortPdfReport(cohortKey) {
+  cohortKey = cohortKey || state.activeTab;
+  const cohort = state.data[cohortKey];
+  if (!cohort || !cohort.subjects || cohort.subjects.length === 0) {
+    showAlertModal('데이터 없음', '다운로드할 과목 선택 데이터가 없습니다.', 'error');
+    return;
+  }
+
+  const cleanCohortName = cohort.name || cohortKey;
+  const simSize = state.simClassSize || 25;
+  const studentCount = cohort.students?.length || 0;
+
+  // 1. Separate designated and elective
+  const designatedSubjects = cohort.subjects.filter(s => s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
+  const electiveSubjects = cohort.subjects.filter(s => !(s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정'));
+
+  // Calculate totals
+  let grandCalc = 0;
+  let grandManual = 0;
+  let totalStudentChoices = 0;
+
+  electiveSubjects.forEach(s => {
+    const calc = Math.round(s.count / simSize);
+    const man = getSubjectManualSections(cohortKey, s.name, calc);
+    grandCalc += calc;
+    grandManual += man;
+    totalStudentChoices += s.count;
+  });
+
+  // Group elective subjects
+  const currentCohortDef = CURRICULUM_DEFINITION[cohortKey];
+  const orderedGroupNames = currentCohortDef?.groups?.map(g => g.name) || [];
+
+  const groupMap = new Map();
+  electiveSubjects.forEach(sub => {
+    const gName = sub.group || '학생선택 과목';
+    if (!groupMap.has(gName)) groupMap.set(gName, []);
+    groupMap.get(gName).push(sub);
+  });
+
+  const sortedGroupNames = Array.from(groupMap.keys()).sort((a, b) => {
+    const idxA = orderedGroupNames.indexOf(a);
+    const idxB = orderedGroupNames.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b, 'ko');
+  });
+
+  // 2. Build Visible Modal Overlay Container (Ensures html2canvas captures 100% of DOM content at real coordinates)
+  const overlay = document.createElement('div');
+  overlay.id = 'pdf-generation-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.78);
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 10px;
+    overflow-y: auto;
+    box-sizing: border-box;
+  `;
+
+  // Status banner on top of overlay
+  const statusBanner = document.createElement('div');
+  statusBanner.style.cssText = `
+    background: #ffffff;
+    padding: 10px 22px;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #4338CA;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  `;
+  statusBanner.innerHTML = `
+    <span style="display:inline-block; width:16px; height:16px; border:2.5px solid #C7D2FE; border-top-color:#4F46E5; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+    <span>📄 [${cleanCohortName}] A4 세로 규격 공식 보고서 PDF 생성 중... 잠시만 기다려주세요.</span>
+  `;
+  overlay.appendChild(statusBanner);
+
+  // The actual printable report container inside overlay (Width: 710px to perfectly fit A4 width 190mm at 96 DPI)
+  const reportWrap = document.createElement('div');
+  reportWrap.id = 'temp-pdf-report-wrapper';
+  reportWrap.style.cssText = `
+    width: 710px;
+    background: #ffffff;
+    color: #1e293b;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+    font-size: 10px;
+    line-height: 1.32;
+    padding: 18px 20px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  `;
+
+  // Build rows HTML
+  let tableRowsHtml = '';
+  let globalRank = 1;
+
+  // Designated Section
+  if (designatedSubjects.length > 0) {
+    tableRowsHtml += `
+      <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #94a3b8; border-bottom:1px solid #cbd5e1;">
+        <td colspan="10" style="padding:5px 8px; text-align:left; color:#334155; font-size:10px;">
+          📌 <strong>학교 지정 과목</strong> (해당 학년 전체 학생 필수 이수 · 총 ${designatedSubjects.length}개 과목)
+        </td>
+      </tr>
+    `;
+    designatedSubjects.forEach(sub => {
+      tableRowsHtml += `
+        <tr style="border-bottom:1px solid #e2e8f0;">
+          <td style="padding:4px 5px; text-align:center; color:#64748b;">${globalRank++}</td>
+          <td style="padding:4px 5px; text-align:center;"><span style="display:inline-block; padding:1px 5px; border-radius:3px; font-size:9.5px; background:#f1f5f9; color:#475569;">${sub.category}</span></td>
+          <td style="padding:4px 6px; font-weight:700; color:#1e293b;">${sub.name}</td>
+          <td style="padding:4px 5px; text-align:center; color:#64748b; font-size:9.5px;">학교지정</td>
+          <td style="padding:4px 5px; text-align:center; font-weight:700;">${sub.units || 3}학점</td>
+          <td style="padding:4px 6px; text-align:right; font-weight:700;">${sub.count}명</td>
+          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
+          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
+          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
+          <td style="padding:4px 6px; text-align:right; color:#64748b;">${sub.rate}%</td>
+        </tr>
+      `;
+    });
+  }
+
+  // Elective Groups
+  sortedGroupNames.forEach(gName => {
+    const subs = groupMap.get(gName);
+    const grpCalc = subs.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+    const grpManual = subs.reduce((sum, s) => sum + getSubjectManualSections(cohortKey, s.name, Math.round(s.count / simSize)), 0);
+    const grpCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
+    const grpRatio = (grpCnt / 25).toFixed(2);
+
+    tableRowsHtml += `
+      <tr style="background:#eef2ff; font-weight:800; border-top:2px solid #818cf8; border-bottom:1px solid #c7d2fe;">
+        <td colspan="6" style="padding:5px 8px; text-align:left; color:#312e81; font-size:10px;">
+          🎯 <strong>${gName}</strong> (${subs.length}개 개설 후보 과목 중 학생 수요 선택)
+        </td>
+        <td colspan="4" style="padding:5px 8px; text-align:right; color:#4338ca; font-size:10px;">
+          학생수/25: <strong>${grpRatio}</strong>  |  예상: <strong>${grpCalc}개반</strong>  |  확정: <strong>${grpManual}개반</strong>
+        </td>
+      </tr>
+    `;
+
+    const sortedSubs = [...subs].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ko'));
+    sortedSubs.forEach(sub => {
+      const calcSec = Math.round(sub.count / simSize);
+      const manSec = getSubjectManualSections(cohortKey, sub.name, calcSec);
+      const isDiff = (manSec !== calcSec);
+      const ratio = (sub.count / 25).toFixed(2);
+
+      tableRowsHtml += `
+        <tr style="border-bottom:1px solid #e2e8f0; ${isDiff ? 'background:#faf5ff;' : ''}">
+          <td style="padding:4px 5px; text-align:center; color:#64748b;">${globalRank++}</td>
+          <td style="padding:4px 5px; text-align:center;"><span style="display:inline-block; padding:1px 5px; border-radius:3px; font-size:9.5px; background:#e0e7ff; color:#3730a3;">${sub.category}</span></td>
+          <td style="padding:4px 6px; font-weight:700; color:#1e293b;">${sub.name}</td>
+          <td style="padding:4px 5px; text-align:center; color:#4338ca; font-size:9.5px;">${sub.group || sub.badge || '선택'}</td>
+          <td style="padding:4px 5px; text-align:center; font-weight:700;">${sub.units || 3}학점</td>
+          <td style="padding:4px 6px; text-align:right; font-weight:700;">${sub.count}명</td>
+          <td style="padding:4px 5px; text-align:center; font-weight:600; color:#475569; background:#f8fafc;">${ratio}</td>
+          <td style="padding:4px 5px; text-align:center; font-weight:700; color:#4338ca;">${calcSec}개 반</td>
+          <td style="padding:4px 5px; text-align:center; font-weight:900; ${isDiff ? 'color:#7c3aed; background:#f3e8ff;' : 'color:#1e1b4b;'}">${manSec}개 반</td>
+          <td style="padding:4px 6px; text-align:right; color:#475569;">${sub.rate}%</td>
+        </tr>
+      `;
+    });
+
+    // Group Subtotal row
+    tableRowsHtml += `
+      <tr style="background:#f8fafc; font-weight:800; border-top:1px dashed #cbd5e1; border-bottom:2px solid #94a3b8;">
+        <td style="padding:4px 5px; text-align:center; color:#64748b; font-size:9.5px;">소계</td>
+        <td colspan="4" style="padding:4px 8px; color:#1e293b; font-size:10px;">
+          ∑ <strong>[${gName}] 분반 수 총계</strong> (${subs.length}개 과목 합산)
+        </td>
+        <td style="padding:4px 6px; text-align:right; font-weight:800; color:#0f172a;">${grpCnt.toLocaleString()}명</td>
+        <td style="padding:4px 5px; text-align:center; font-weight:700; color:#334155; background:#f1f5f9;">${grpRatio}</td>
+        <td style="padding:4px 5px; text-align:center; font-weight:900; color:#4338ca; background:#eef2ff;">${grpCalc}개 반</td>
+        <td style="padding:4px 5px; text-align:center; font-weight:900; color:#6d28d9; background:#ede9fe;">${grpManual}개 반</td>
+        <td style="padding:4px 5px; text-align:center; font-size:9.5px; color:#64748b;">(기준: ${simSize}명)</td>
+      </tr>
+    `;
+  });
+
+  // Grand Total row
+  const grandRatio = (totalStudentChoices / 25).toFixed(2);
+  tableRowsHtml += `
+    <tr style="background:#ede9fe; font-weight:900; border-top:2px solid #6366f1; border-bottom:2px solid #6366f1; font-size:10.5px;">
+      <td style="padding:5px; text-align:center; color:#4c1d95;">총계</td>
+      <td colspan="4" style="padding:5px 8px; color:#312e81;">
+        🎯 <strong>학생선택 과목 전체 분반 총계</strong>
+      </td>
+      <td style="padding:5px 6px; text-align:right; color:#1e1b4b;">${totalStudentChoices.toLocaleString()}명</td>
+      <td style="padding:5px 5px; text-align:center; color:#312e81; background:#ddd6fe;">${grandRatio}</td>
+      <td style="padding:5px 5px; text-align:center; color:#312e81; background:#e0e7ff;">${grandCalc}개 반</td>
+      <td style="padding:5px 5px; text-align:center; color:#4c1d95; background:#ddd6fe;">${grandManual}개 반</td>
+      <td style="padding:5px 5px; text-align:center; font-size:9.5px; color:#4338ca;">최종 확정</td>
+    </tr>
+  `;
+
+  // Construct complete document
+  reportWrap.innerHTML = `
+    <!-- Top Header Bar with School Stamp/Signature box -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:2px solid #1e293b; padding-bottom:10px;">
+      <div>
+        <div style="font-size:10.5px; font-weight:700; color:#6366f1; letter-spacing:0.5px;">정명고등학교 교육과정위원회 공식 보고서</div>
+        <h1 style="font-size:17px; font-weight:900; color:#0f172a; margin:3px 0 2px 0;">
+          ${cleanCohortName} 과목 선택 결과 및 분반 편성 현황표
+        </h1>
+        <div style="font-size:10px; color:#64748b; margin-top:2px;">
+          분석 기준 정원: <strong>${simSize}명/반</strong>  |  총 학생 수: <strong>${studentCount}명</strong>  |  작성일: <strong>${new Date().toLocaleDateString('ko-KR')}</strong>
+        </div>
+      </div>
+      <!-- Approval Sign-off Box -->
+      <table style="border-collapse:collapse; text-align:center; font-size:9.5px; border:1px solid #cbd5e1;">
+        <tr style="background:#f8fafc; font-weight:700;">
+          <td rowspan="2" style="width:18px; border:1px solid #cbd5e1; background:#f1f5f9; padding:2px;">결<br>재</td>
+          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">담 당</td>
+          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">부 장</td>
+          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">교 감</td>
+          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">교 장</td>
+        </tr>
+        <tr style="height:32px;">
+          <td style="border:1px solid #cbd5e1;"></td>
+          <td style="border:1px solid #cbd5e1;"></td>
+          <td style="border:1px solid #cbd5e1;"></td>
+          <td style="border:1px solid #cbd5e1;"></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Summary KPI Strip -->
+    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-bottom:10px;">
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:5px; padding:5px 6px; text-align:center;">
+        <div style="font-size:9.5px; color:#64748b; font-weight:600;">총 개설 과목</div>
+        <div style="font-size:13px; font-weight:800; color:#1e293b; margin-top:1px;">${cohort.subjects.length}개 과목</div>
+      </div>
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:5px; padding:5px 6px; text-align:center;">
+        <div style="font-size:9.5px; color:#64748b; font-weight:600;">학교 지정 과목</div>
+        <div style="font-size:13px; font-weight:800; color:#475569; margin-top:1px;">${designatedSubjects.length}개</div>
+      </div>
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:5px; padding:5px 6px; text-align:center;">
+        <div style="font-size:9.5px; color:#64748b; font-weight:600;">학생 선택 과목</div>
+        <div style="font-size:13px; font-weight:800; color:#4338ca; margin-top:1px;">${electiveSubjects.length}개</div>
+      </div>
+      <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:5px; padding:5px 6px; text-align:center;">
+        <div style="font-size:9.5px; color:#4338ca; font-weight:700;">예상 분반 총계</div>
+        <div style="font-size:14px; font-weight:900; color:#312e81; margin-top:1px;">${grandCalc}개 반</div>
+      </div>
+      <div style="background:#ede9fe; border:1.5px solid #a78bfa; border-radius:5px; padding:5px 6px; text-align:center;">
+        <div style="font-size:9.5px; color:#6d28d9; font-weight:700;">확정 분반 총계</div>
+        <div style="font-size:14px; font-weight:900; color:#4c1d95; margin-top:1px;">${grandManual}개 반</div>
+      </div>
+    </div>
+
+    <!-- Main Data Table -->
+    <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #cbd5e1; margin-bottom:10px;">
+      <thead>
+        <tr style="background:#1e293b; color:#ffffff; font-weight:800; text-align:center;">
+          <th style="padding:5px 4px; width:30px;">순위</th>
+          <th style="padding:5px 4px; width:60px;">교과 영역</th>
+          <th style="padding:5px 6px; text-align:left;">과목명</th>
+          <th style="padding:5px 4px; width:80px;">이수 구분</th>
+          <th style="padding:5px 4px; width:45px;">학점</th>
+          <th style="padding:5px 5px; width:55px; text-align:right;">신청 학생</th>
+          <th style="padding:5px 4px; width:60px; background:#334155;">학생수/25</th>
+          <th style="padding:5px 4px; width:65px;">예상 분반</th>
+          <th style="padding:5px 4px; width:65px; background:#4338ca;">확정 분반</th>
+          <th style="padding:5px 4px; width:50px; text-align:right;">선택률</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHtml}
+      </tbody>
+    </table>
+
+    <!-- Bottom Footer Note -->
+    <div style="display:flex; justify-content:space-between; align-items:center; font-size:9px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:6px;">
+      <span>※ 본 현황표는 정명고등학교 2022 개정 교육과정 수강신청 결과 분석 도구에서 자동 산출 및 편성된 공문서용 자료입니다.</span>
+      <span style="font-weight:700;">정명고등학교 교육과정부</span>
+    </div>
+  `;
+
+  overlay.appendChild(reportWrap);
+  document.body.appendChild(overlay);
+
+  // Scroll overlay to top
+  overlay.scrollTop = 0;
+
+  // 3. Trigger html2pdf export with A4 portrait settings
+  if (window.html2pdf) {
+    const opt = {
+      margin: [8, 8, 8, 8],
+      filename: `정명고_과목선택결과_${cleanCohortName.replace(/[\s\(\)]/g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        letterRendering: true, 
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 1024
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(reportWrap).save().then(() => {
+      if (overlay.parentNode) {
+        document.body.removeChild(overlay);
+      }
+      showAlertModal('PDF 다운로드 완료', `[${cleanCohortName}] A4 세로 규격 공식 보고서 PDF 파일이 정상적으로 다운로드되었습니다.`, 'success');
+    }).catch(err => {
+      console.error('html2pdf generation error, falling back to window.print():', err);
+      if (overlay.parentNode) {
+        document.body.removeChild(overlay);
+      }
+      showAlertModal('다운로드 안내', 'PDF 라이브러리 처리 중 인쇄 모드로 전환합니다.', 'info');
+      window.print();
+    });
+  } else {
+    // Fallback if CDN failed
+    if (overlay.parentNode) {
+      document.body.removeChild(overlay);
+    }
+    window.print();
+  }
+}
+
+// -------------------------------------------------------------
+// Excel Export Functionality (단일 학기 고품질 서식 엑셀)
 // -------------------------------------------------------------
 function exportCurrentTableToExcel() {
   const currentKey = state.activeTab;
@@ -2126,19 +2640,25 @@ function exportCurrentTableToExcel() {
     return;
   }
 
+  const cleanCohortName = cohort.name || currentKey;
   const simSize = state.simClassSize || 25;
-  const exportData = [
-    ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', `예상 분반 수 (${simSize}명 기준)`, '선택률(%)', '주당 필요 시수']
-  ];
 
   const designatedSubjects = cohort.subjects.filter(s => s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
   const electiveSubjects = cohort.subjects.filter(s => !(s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정'));
+
+  // Header Title & Metadata rows
+  const exportData = [
+    [`정명고등학교 2027학년도 교육과정 과목 선택 및 분반 편성 현황 (${cleanCohortName})`],
+    [`작성 기준: 학급당 ${simSize}명 기준  |  총 학생수: ${cohort.students?.length || 0}명  |  작성일자: ${new Date().toLocaleDateString('ko-KR')}  |  확정 분반 수(직접 입력) 포함`],
+    [],
+    ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '학생수/25', `예상 분반 (${simSize}명 기준)`, '확정 분반 (직접 입력)', '선택률(%)', '주당 필요 시수']
+  ];
 
   let rank = 1;
 
   // 1. 학교 지정 과목
   if (designatedSubjects.length > 0) {
-    exportData.push(['[학교 지정 과목]', '', '', '', '', '', '', '', '']);
+    exportData.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '']);
     designatedSubjects.forEach(s => {
       exportData.push([
         rank++,
@@ -2147,6 +2667,8 @@ function exportCurrentTableToExcel() {
         s.group || '학교지정',
         s.units || 3,
         s.count,
+        '-',
+        '-',
         '-',
         s.rate + '%',
         '-'
@@ -2175,21 +2697,24 @@ function exportCurrentTableToExcel() {
       return a.localeCompare(b, 'ko');
     });
 
-    let overallSec = 0;
+    let overallCalcSec = 0;
+    let overallManualSec = 0;
     let overallCount = 0;
     let overallHours = 0;
 
     sortedGroupNames.forEach(gName => {
       const subs = groupMap.get(gName);
-      const groupSec = subs.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+      const groupCalcSec = subs.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+      const groupManualSec = subs.reduce((sum, s) => sum + getSubjectManualSections(currentKey, s.name, Math.round(s.count / simSize)), 0);
       const groupCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
       let groupHours = 0;
 
-      exportData.push([`[${gName}]`, '', '', '', '', '', `분반 합계: ${groupSec}개 반`, '', '']);
+      exportData.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, '', '']);
 
       subs.forEach(s => {
         const sections = Math.round(s.count / simSize);
-        const hours = sections * (s.units || 3);
+        const manualSec = getSubjectManualSections(currentKey, s.name, sections);
+        const hours = manualSec * (s.units || 3);
         groupHours += hours;
         exportData.push([
           rank++,
@@ -2198,13 +2723,16 @@ function exportCurrentTableToExcel() {
           s.group || s.type,
           s.units || 3,
           s.count,
-          `${sections}개 분반`,
+          Number((s.count / 25).toFixed(2)),
+          `${sections}개 반`,
+          `${manualSec}개 반`,
           s.rate + '%',
           hours
         ]);
       });
 
-      overallSec += groupSec;
+      overallCalcSec += groupCalcSec;
+      overallManualSec += groupManualSec;
       overallCount += groupCnt;
       overallHours += groupHours;
 
@@ -2213,10 +2741,12 @@ function exportCurrentTableToExcel() {
         '소계',
         gName,
         `[${gName}] 분반 수 총계`,
-        '',
+        `총 ${subs.length}개 과목 합산`,
         '',
         groupCnt,
-        `${groupSec}개 반`,
+        Number((groupCnt / 25).toFixed(2)),
+        `${groupCalcSec}개 반`,
+        `${groupManualSec}개 반`,
         '',
         groupHours
       ]);
@@ -2227,19 +2757,51 @@ function exportCurrentTableToExcel() {
       '총계',
       '학생선택 전체',
       '학생선택 과목 전체 분반 총계',
-      '',
+      '전체 개설 학급 합계',
       '',
       overallCount,
-      `${overallSec}개 반`,
+      Number((overallCount / 25).toFixed(2)),
+      `${overallCalcSec}개 반`,
+      `${overallManualSec}개 반`,
       '',
       overallHours
     ]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(exportData);
+
+  // Set generous column widths so no text or numbers are truncated
+  ws['!cols'] = [
+    { wch: 8 },  // 순위
+    { wch: 14 }, // 교과 영역
+    { wch: 24 }, // 과목명
+    { wch: 20 }, // 이수 구분
+    { wch: 8 },  // 학점
+    { wch: 14 }, // 선택 학생수
+    { wch: 12 }, // 학생수/25
+    { wch: 18 }, // 예상 분반
+    { wch: 18 }, // 확정 분반
+    { wch: 12 }, // 선택률
+    { wch: 14 }  // 필요 시수
+  ];
+
+  // Set row heights
+  ws['!rows'] = [
+    { hpt: 32 }, // Title
+    { hpt: 20 }, // Subtitle
+    { hpt: 10 }, // Blank
+    { hpt: 25 }  // Table header
+  ];
+
+  // Merged title rows
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } }
+  ];
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '과목선택결과');
-  XLSX.writeFile(wb, `정명고_과목선택결과_${currentKey}.xlsx`);
+  XLSX.writeFile(wb, `정명고_과목선택결과_${cleanCohortName.replace(/[\s\(\)]/g, '_')}.xlsx`);
 }
 
 function export4ScienceListToExcel() {
@@ -2378,13 +2940,15 @@ function renderMasterSummaryView() {
   tbody.innerHTML = '';
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#94A3B8;">조건에 일치하는 과목이 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:32px; color:#94A3B8;">조건에 일치하는 과목이 없습니다.</td></tr>`;
     return;
   }
 
   filtered.forEach(sub => {
     const isDesignated = (sub.type === '지정' || sub.group === '학교지정' || sub.badge === '학교지정');
     const sections = isDesignated ? '-' : Math.round(sub.count / 25);
+    const manualVal = isDesignated ? '-' : getSubjectManualSections(sub.cohortKey, sub.name, sections);
+    const isDiff = !isDesignated && (manualVal !== sections);
 
     let catBadgeClass = 'badge-gray';
     if (sub.category === '기초') catBadgeClass = 'badge-purple';
@@ -2429,6 +2993,9 @@ function renderMasterSummaryView() {
       <td style="text-align:center; font-weight:700; color:#4F46E5; white-space:nowrap;">
         ${isDesignated ? '<span style="color:#94A3B8; font-weight:normal;">-</span>' : `${sections}개 분반`}
       </td>
+      <td style="text-align:center; white-space:nowrap;">
+        ${isDesignated ? '<span style="color:#94A3B8; font-weight:normal;">-</span>' : `<span class="badge ${isDiff ? 'badge-purple' : 'badge-blue'}" style="font-size:0.82rem; padding:3px 8px; font-weight:700;" title="${isDiff ? '사용자가 직접 입력하여 수정한 분반 수' : '계산된 분반 수 유지'}">${manualVal}개 분반${isDiff ? ' ✎' : ''}</span>`}
+      </td>
       <td>
         <div class="progress-bar-wrap" style="min-width:110px;">
           <div class="progress-track">
@@ -2457,68 +3024,311 @@ function renderMasterSummaryView() {
 function exportMasterSummaryToExcel() {
   const wb = XLSX.utils.book_new();
   const cohorts = ['2026_2_1', '2026_2_2', '2025_3_1', '2025_3_2'];
+  const simSize = state.simClassSize || 25;
+  const todayStr = new Date().toLocaleDateString('ko-KR');
 
-  // Sheet 1: Master Integrated Overview
+  let allTotalStudents = 0;
+  let allTotalSubjects = 0;
+  cohorts.forEach(k => {
+    allTotalStudents += (state.data[k]?.students?.length || 0);
+    allTotalSubjects += (state.data[k]?.subjects?.length || 0);
+  });
+
+  // -----------------------------------------------------------
+  // Sheet 1: Master Integrated Overview (전체 학기 통합 현황)
+  // -----------------------------------------------------------
   const masterRows = [
-    ['대상 학기', '순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '예상 분반 수 (25명 기준, 학교지정은 -)', '선택률(%)', '주당 필요 시수']
+    ['정명고등학교 2027학년도 전 학년·학기 과목선택 및 분반 편성 종합 보고서'],
+    [`분석 기준: 학급당 ${simSize}명 기준  |  전체 분석 학생: ${allTotalStudents}명(연인원)  |  총 편제 과목: ${allTotalSubjects}개  |  작성일자: ${todayStr}  |  확정 분반(사용자 직접 입력값) 포함`],
+    [],
+    ['대상 학기', '순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '신청 학생수', '학생수/25', `예상 분반 (${simSize}명 기준)`, '확정 분반 (직접 입력)', '선택률(%)', '주당 필요 시수']
   ];
 
+  let grandCalcSec = 0;
+  let grandManualSec = 0;
+  let grandStudents = 0;
+  let grandHours = 0;
+
   cohorts.forEach(key => {
     const ch = state.data[key];
     if (!ch || !ch.subjects) return;
+    const cohortName = ch.name || key;
+
+    let cohortCalcSec = 0;
+    let cohortManualSec = 0;
+    let cohortStudents = 0;
+    let cohortHours = 0;
+
+    // Cohort separator header
+    masterRows.push([`▶ ${cohortName}`, '', '', '', '', '', '', '', '', '', '', '']);
+
     ch.subjects.forEach((s, idx) => {
       const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
-      const sections = isDesignated ? '-' : Math.round(s.count / 25);
-      const hours = isDesignated ? '-' : (sections * (s.units || 3));
+      const sections = isDesignated ? '-' : Math.round(s.count / simSize);
+      const manualVal = isDesignated ? '-' : getSubjectManualSections(key, s.name, sections);
+      const hours = isDesignated ? '-' : (manualVal * (s.units || 3));
+
+      if (!isDesignated) {
+        cohortCalcSec += sections;
+        cohortManualSec += manualVal;
+        cohortStudents += (s.count || 0);
+        cohortHours += hours;
+      }
+
       masterRows.push([
-        ch.name || key,
+        cohortName,
         idx + 1,
         s.category,
         s.name,
         s.group || s.type,
         s.units || 3,
         s.count,
-        sections,
+        isDesignated ? '-' : Number((s.count / 25).toFixed(2)),
+        isDesignated ? '-' : `${sections}개 반`,
+        isDesignated ? '-' : `${manualVal}개 반`,
         s.rate + '%',
         hours
       ]);
     });
+
+    // Cohort Subtotal Row
+    masterRows.push([
+      `[소계] ${cohortName}`,
+      '소계',
+      '선택과목',
+      `${cohortName} 학생선택 분반 합계`,
+      '선택군 전체 합산',
+      '',
+      cohortStudents,
+      Number((cohortStudents / 25).toFixed(2)),
+      `${cohortCalcSec}개 반`,
+      `${cohortManualSec}개 반`,
+      '',
+      cohortHours
+    ]);
+    masterRows.push([]); // blank row between cohorts
+
+    grandCalcSec += cohortCalcSec;
+    grandManualSec += cohortManualSec;
+    grandStudents += cohortStudents;
+    grandHours += cohortHours;
   });
+
+  // Grand Total Row
+  masterRows.push([
+    '★ 전 학기 통합 총계',
+    '총계',
+    '전체 과목',
+    '정명고 4개 학기 학생선택 분반 총계',
+    '전 학기 합산',
+    '',
+    grandStudents,
+    Number((grandStudents / 25).toFixed(2)),
+    `${grandCalcSec}개 반`,
+    `${grandManualSec}개 반`,
+    '',
+    grandHours
+  ]);
 
   const wsMaster = XLSX.utils.aoa_to_sheet(masterRows);
+  wsMaster['!cols'] = [
+    { wch: 18 }, // 대상 학기
+    { wch: 8 },  // 순위
+    { wch: 12 }, // 교과 영역
+    { wch: 26 }, // 과목명
+    { wch: 22 }, // 이수 구분
+    { wch: 8 },  // 학점
+    { wch: 14 }, // 신청 학생수
+    { wch: 12 }, // 학생수/25
+    { wch: 18 }, // 예상 분반
+    { wch: 18 }, // 확정 분반
+    { wch: 12 }, // 선택률
+    { wch: 14 }  // 주당 필요 시수
+  ];
+  wsMaster['!rows'] = [
+    { hpt: 32 }, // Title
+    { hpt: 20 }, // Subtitle
+    { hpt: 10 }, // Blank
+    { hpt: 26 }  // Header
+  ];
+  wsMaster['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }
+  ];
   XLSX.utils.book_append_sheet(wb, wsMaster, '전체학기_통합현황');
 
-  // Individual sheets for each of the 4 cohorts
+  // -----------------------------------------------------------
+  // Sheets 2-5: Individual Cohort Sheets (각 학년·학기별 상세 현황)
+  // -----------------------------------------------------------
   cohorts.forEach(key => {
     const ch = state.data[key];
     if (!ch || !ch.subjects) return;
-    const sheetRows = [
-      ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '예상 분반 수 (25명 기준)', '선택률(%)', '주당 필요 시수']
-    ];
-    ch.subjects.forEach((s, idx) => {
-      const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
-      const sections = isDesignated ? '-' : Math.round(s.count / 25);
-      const hours = isDesignated ? '-' : (sections * (s.units || 3));
-      sheetRows.push([
-        idx + 1,
-        s.category,
-        s.name,
-        s.group || s.type,
-        s.units || 3,
-        s.count,
-        sections,
-        s.rate + '%',
-        hours
-      ]);
-    });
+    const cleanCohortName = ch.name || key;
 
-    const sheetName = key.replace('_', '입학_');
+    const designatedSubjects = ch.subjects.filter(s => s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
+    const electiveSubjects = ch.subjects.filter(s => !(s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정'));
+
+    const sheetRows = [
+      [`정명고등학교 2027학년도 교육과정 과목선택 및 분반 편성 현황 (${cleanCohortName})`],
+      [`작성 기준: 학급당 ${simSize}명 기준  |  총 학생수: ${ch.students?.length || 0}명  |  작성일자: ${todayStr}  |  확정 분반(사용자 직접 입력) 포함`],
+      [],
+      ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '학생수/25', `예상 분반 (${simSize}명 기준)`, '확정 분반 (직접 입력)', '선택률(%)', '주당 필요 시수']
+    ];
+
+    let rank = 1;
+
+    // 1. 학교 지정 과목
+    if (designatedSubjects.length > 0) {
+      sheetRows.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '']);
+      designatedSubjects.forEach(s => {
+        sheetRows.push([
+          rank++,
+          s.category,
+          s.name,
+          s.group || '학교지정',
+          s.units || 3,
+          s.count,
+          '-',
+          '-',
+          '-',
+          s.rate + '%',
+          '-'
+        ]);
+      });
+    }
+
+    // 2. 학생 선택 과목 (선택군별 그룹핑 및 소계)
+    if (electiveSubjects.length > 0) {
+      const currentCohortDef = CURRICULUM_DEFINITION[key];
+      const orderedGroupNames = currentCohortDef?.groups?.map(g => g.name) || [];
+
+      const groupMap = new Map();
+      electiveSubjects.forEach(sub => {
+        const gName = sub.group || '학생선택 과목';
+        if (!groupMap.has(gName)) groupMap.set(gName, []);
+        groupMap.get(gName).push(sub);
+      });
+
+      const sortedGroupNames = Array.from(groupMap.keys()).sort((a, b) => {
+        const idxA = orderedGroupNames.indexOf(a);
+        const idxB = orderedGroupNames.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b, 'ko');
+      });
+
+      let overallCalcSec = 0;
+      let overallManualSec = 0;
+      let overallCount = 0;
+      let overallHours = 0;
+
+      sortedGroupNames.forEach(gName => {
+        const subs = groupMap.get(gName);
+        const groupCalcSec = subs.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+        const groupManualSec = subs.reduce((sum, s) => sum + getSubjectManualSections(key, s.name, Math.round(s.count / simSize)), 0);
+        const groupCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
+        let groupHours = 0;
+
+        sheetRows.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, '', '']);
+
+        subs.forEach(s => {
+          const sections = Math.round(s.count / simSize);
+          const manualSec = getSubjectManualSections(key, s.name, sections);
+          const hours = manualSec * (s.units || 3);
+          groupHours += hours;
+          sheetRows.push([
+            rank++,
+            s.category,
+            s.name,
+            s.group || s.type,
+            s.units || 3,
+            s.count,
+            Number((s.count / 25).toFixed(2)),
+            `${sections}개 반`,
+            `${manualSec}개 반`,
+            s.rate + '%',
+            hours
+          ]);
+        });
+
+        overallCalcSec += groupCalcSec;
+        overallManualSec += groupManualSec;
+        overallCount += groupCnt;
+        overallHours += groupHours;
+
+        // Group Subtotal row
+        sheetRows.push([
+          '소계',
+          gName,
+          `[${gName}] 분반 수 총계`,
+          `총 ${subs.length}개 과목 합산`,
+          '',
+          groupCnt,
+          Number((groupCnt / 25).toFixed(2)),
+          `${groupCalcSec}개 반`,
+          `${groupManualSec}개 반`,
+          '',
+          groupHours
+        ]);
+      });
+
+      // Grand total row
+      sheetRows.push([
+        '총계',
+        '학생선택 전체',
+        '학생선택 과목 전체 분반 총계',
+        '전체 개설 학급 합계',
+        '',
+        overallCount,
+        Number((overallCount / 25).toFixed(2)),
+        `${overallCalcSec}개 반`,
+        `${overallManualSec}개 반`,
+        '',
+        overallHours
+      ]);
+    }
+
+    let tabShortName = cleanCohortName;
+    if (key === '2026_2_1') tabShortName = '2학년 1학기';
+    else if (key === '2026_2_2') tabShortName = '2학년 2학기';
+    else if (key === '2025_3_1') tabShortName = '3학년 1학기';
+    else if (key === '2025_3_2') tabShortName = '3학년 2학기';
+
     const wsCohort = XLSX.utils.aoa_to_sheet(sheetRows);
-    XLSX.utils.book_append_sheet(wb, wsCohort, sheetName);
+    wsCohort['!cols'] = [
+      { wch: 8 },  // 순위
+      { wch: 14 }, // 교과 영역
+      { wch: 24 }, // 과목명
+      { wch: 20 }, // 이수 구분
+      { wch: 8 },  // 학점
+      { wch: 14 }, // 선택 학생수
+      { wch: 12 }, // 학생수/25
+      { wch: 18 }, // 예상 분반
+      { wch: 18 }, // 확정 분반
+      { wch: 12 }, // 선택률
+      { wch: 14 }  // 필요 시수
+    ];
+    wsCohort['!rows'] = [
+      { hpt: 30 },
+      { hpt: 20 },
+      { hpt: 10 },
+      { hpt: 25 }
+    ];
+    wsCohort['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsCohort, tabShortName);
   });
 
-  // Sheet for Science Focus Summary
+  // -----------------------------------------------------------
+  // Sheet 6: Science Focus Summary (과학중점 과정 분석)
+  // -----------------------------------------------------------
   const sciRows = [
+    ['정명고등학교 과학중점(집중) 과정 선택 현황 분석'],
+    [`2027학년도 교육과정 기준  |  작성일자: ${todayStr}  |  과학 계열 심화 선택 학생 집중 분석`],
+    [],
     ['학기 구분', '구분 명칭', '대상 과학 과목군', '기준 요건', '해당 학생수', '전체 학생 대비 비율(%)']
   ];
   ['2026_2_1', '2026_2_2', '2025_3_1'].forEach(k => {
@@ -2537,9 +3347,27 @@ function exportMasterSummaryToExcel() {
     }
   });
   const wsSci = XLSX.utils.aoa_to_sheet(sciRows);
+  wsSci['!cols'] = [
+    { wch: 20 }, // 학기 구분
+    { wch: 20 }, // 구분 명칭
+    { wch: 38 }, // 대상 과학 과목군
+    { wch: 18 }, // 기준 요건
+    { wch: 14 }, // 해당 학생수
+    { wch: 18 }  // 비율
+  ];
+  wsSci['!rows'] = [
+    { hpt: 30 },
+    { hpt: 20 },
+    { hpt: 10 },
+    { hpt: 25 }
+  ];
+  wsSci['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }
+  ];
   XLSX.utils.book_append_sheet(wb, wsSci, '과학집중_종합현황');
 
-  XLSX.writeFile(wb, '2027학년도_과목선택_통합종합분석보고서.xlsx');
+  XLSX.writeFile(wb, '정명고등학교_2027학년도_과목선택_통합종합분석보고서.xlsx');
 }
 
 // -------------------------------------------------------------
@@ -3288,6 +4116,18 @@ function setupEventListeners() {
   document.getElementById('btn-export-sci4-excel')?.addEventListener('click', export4ScienceListToExcel);
   document.getElementById('btn-export-matrix')?.addEventListener('click', exportCoSelectionMatrixToExcel);
   document.getElementById('btn-export-master-excel')?.addEventListener('click', exportMasterSummaryToExcel);
+  document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
+    downloadCohortPdfReport(state.activeTab);
+  });
+  document.getElementById('btn-export-current-excel')?.addEventListener('click', () => {
+    exportCurrentTableToExcel();
+  });
+  document.getElementById('btn-reset-manual-sections')?.addEventListener('click', () => {
+    resetCohortManualSections(state.activeTab);
+    const cohort = state.data[state.activeTab];
+    renderSubjectTable(cohort?.subjects || [], cohort?.students?.length || 0);
+    showAlertModal('분반 초기화 완료', '현재 학기의 모든 과목 확정 분반 수가 초기 계산값(25명 기준)으로 복원되었습니다.', 'info');
+  });
 
   // 13. Print Button
   document.getElementById('btn-print')?.addEventListener('click', () => {
