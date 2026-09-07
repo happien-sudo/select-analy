@@ -251,6 +251,14 @@ function resetCohortManualSections(cohortKey) {
   saveManualSectionsToStorage();
 }
 
+// 학급당 인원수 계산 함수 (소수점 둘째자리까지 표기, 정수는 정수로 표기)
+function formatClassAvg(count, sections) {
+  if (!sections || sections <= 0) return '-';
+  const val = count / sections;
+  if (val % 1 === 0) return String(val);
+  return val.toFixed(2);
+}
+
 // Function to update Base Year dynamically (2026 -> 2027 etc.)
 function setBaseYear(newYear, refreshUI = true) {
   const year = parseInt(newYear, 10);
@@ -1259,11 +1267,12 @@ function renderSubjectTable(subjects, totalCount) {
 
   const simHeaderTh = document.getElementById('th-sim-sections') || document.querySelector('#subject-table thead th:nth-child(8)');
   if (simHeaderTh) {
-    simHeaderTh.textContent = `예상 분반 (${state.simClassSize || 25}명 기준)`;
+    simHeaderTh.textContent = '예상 분반';
+    simHeaderTh.title = `기준: 학급당 ${state.simClassSize || 25}명`;
   }
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:32px; color:#94A3B8;">조건에 맞는 과목이 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:32px; color:#94A3B8;">조건에 맞는 과목이 없습니다.</td></tr>`;
     return;
   }
 
@@ -1337,6 +1346,10 @@ function renderSubjectTable(subjects, totalCount) {
           <span style="font-size:0.8rem; font-weight:700; color:#475569;">반</span>
         </div>`;
 
+    // 학급당 인원수 산출 (소수점 둘째자리까지)
+    const classAvgVal = isDesignated ? '-' : formatClassAvg(sub.count, manualVal);
+    const classAvgTitle = (!isDesignated && manualVal > 0) ? `${sub.count}명 ÷ ${manualVal}반 = ${(sub.count / manualVal).toFixed(2)}명` : '';
+
     tr.innerHTML = `
       <td style="text-align:center; font-weight:700; color:#64748B;">${rowIdx}</td>
       <td><span class="badge ${catBadgeClass}">${sub.category}</span></td>
@@ -1357,6 +1370,13 @@ function renderSubjectTable(subjects, totalCount) {
       </td>
       <td style="text-align:center; white-space:nowrap;">
         ${manualInputHtml}
+      </td>
+      <td style="text-align:center; font-weight:700; color:#334155; font-size:0.92rem; white-space:nowrap; background:#F8FAFC;" 
+          class="class-avg-cell" 
+          data-sub="${sub.name}" 
+          data-count="${sub.count}"
+          title="${classAvgTitle}">
+        ${classAvgVal}
       </td>
       <td>
         <div class="progress-bar-wrap">
@@ -1380,7 +1400,7 @@ function renderSubjectTable(subjects, totalCount) {
     const secTr = document.createElement('tr');
     secTr.className = 'table-group-header group-header-designated';
     secTr.innerHTML = `
-      <td colspan="11">
+      <td colspan="12">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
           <span>
             <i data-lucide="lock" style="width:16px; height:16px; vertical-align:middle; margin-right:6px; color:#475569;"></i>
@@ -1458,7 +1478,7 @@ function renderSubjectTable(subjects, totalCount) {
       const grpTr = document.createElement('tr');
       grpTr.className = `table-group-header ${styleMeta.headerClass}`;
       grpTr.innerHTML = `
-        <td colspan="11">
+        <td colspan="12">
           <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <i data-lucide="${styleMeta.icon}" style="width:16px; height:16px; vertical-align:middle;"></i>
@@ -1488,6 +1508,9 @@ function renderSubjectTable(subjects, totalCount) {
       // 3. 선택군별 소계 행 (Group Subtotal Row)
       const subtotalTr = document.createElement('tr');
       subtotalTr.className = `group-subtotal-row ${styleMeta.rowClass}`;
+      const groupAvg = groupManualSections > 0 ? formatClassAvg(groupStudents, groupManualSections) : '-';
+      const groupAvgTitle = groupManualSections > 0 ? `${groupStudents}명 ÷ ${groupManualSections}반 = ${(groupStudents / groupManualSections).toFixed(2)}명` : '';
+
       subtotalTr.innerHTML = `
         <td style="text-align:center; font-weight:700; color:#64748B; font-size:0.82rem;">소계</td>
         <td style="text-align:center;"><span class="badge ${styleMeta.badgeClass}" style="font-size:0.75rem;">${repBadge || '선택'}</span></td>
@@ -1508,6 +1531,9 @@ function renderSubjectTable(subjects, totalCount) {
         <td style="text-align:center; white-space:nowrap;" class="subtotal-manual-cell" data-group-manual="${gName}">
           ${groupManualSections}개 반
         </td>
+        <td style="text-align:center; font-weight:800; color:#1E293B; font-size:0.92rem; white-space:nowrap; background:#F8FAFC;" data-group-avg="${gName}" data-group-count="${groupStudents}" title="${groupAvgTitle}">
+          ${groupAvg}
+        </td>
         <td colspan="2" style="color:#475569; font-size:0.82rem; vertical-align:middle;">
           <span style="display:inline-flex; align-items:center; gap:4px; font-weight:600;">
             <i data-lucide="check-circle-2" style="width:14px; height:14px; color:#10B981;"></i>
@@ -1524,6 +1550,8 @@ function renderSubjectTable(subjects, totalCount) {
       grandTr.className = 'table-grand-total-row';
       const detailBreakdown = groupSummaries.map(g => `${g.name}: ${g.manualSections}개반`).join(' + ');
       const grandRatio = (grandElectiveCount / 25).toFixed(2);
+      const grandAvg = grandElectiveManualSections > 0 ? formatClassAvg(grandElectiveCount, grandElectiveManualSections) : '-';
+      const grandAvgTitle = grandElectiveManualSections > 0 ? `${grandElectiveCount}명 ÷ ${grandElectiveManualSections}반 = ${(grandElectiveCount / grandElectiveManualSections).toFixed(2)}명` : '';
 
       grandTr.innerHTML = `
         <td style="text-align:center; font-weight:800; color:#3730A3; font-size:0.85rem;">총계</td>
@@ -1544,6 +1572,9 @@ function renderSubjectTable(subjects, totalCount) {
         </td>
         <td style="text-align:center; white-space:nowrap;" class="grand-manual-cell" id="grand-manual-sections">
           ${grandElectiveManualSections}개 반
+        </td>
+        <td style="text-align:center; font-weight:900; color:#4C1D95; font-size:0.95rem; white-space:nowrap; background:#EDE9FE;" id="grand-total-avg-cell" data-grand-count="${grandElectiveCount}" title="${grandAvgTitle}">
+          ${grandAvg}
         </td>
         <td colspan="2" style="color:#3730A3; font-size:0.85rem; font-weight:700;">
           전체 학생선택 확정 분반: <strong style="color:#4C1D95; font-size:1.05rem;" id="grand-note-manual">${grandElectiveManualSections}개 반</strong>
@@ -1577,7 +1608,7 @@ function renderSubjectTable(subjects, totalCount) {
     }
   }
 
-  // 6. 실시간 분반 직접 입력 이벤트 바인딩 (실시간 소계/총계/배지 자동 변환)
+  // 6. 실시간 분반 직접 입력 이벤트 바인딩 (실시간 소계/총계/배지/학급당 인원 자동 변환)
   tbody.querySelectorAll('.manual-section-input').forEach(input => {
     input.addEventListener('input', () => {
       const subName = input.getAttribute('data-sub');
@@ -1587,6 +1618,14 @@ function renderSubjectTable(subjects, totalCount) {
 
       setSubjectManualSections(state.activeTab, subName, val);
       input.classList.toggle('is-modified', val !== calcVal);
+
+      // 해당 행의 학급당 인원수 실시간 재계산
+      const avgCell = tbody.querySelector(`.class-avg-cell[data-sub="${subName}"]`);
+      if (avgCell) {
+        const count = parseInt(avgCell.getAttribute('data-count'), 10) || 0;
+        avgCell.textContent = formatClassAvg(count, val);
+        avgCell.title = val > 0 ? `${count}명 ÷ ${val}반 = ${(count / val).toFixed(2)}명` : '';
+      }
 
       // 테이블 내 실시간 합계 재계산
       updateTableManualTotals();
@@ -1605,7 +1644,7 @@ function renderSubjectTable(subjects, totalCount) {
   });
 }
 
-// 실시간 직접 입력 분반 수 소계/총계/배지 동적 갱신 함수
+// 실시간 직접 입력 분반 수 소계/총계/배지/학급당 인원 동적 갱신 함수
 function updateTableManualTotals() {
   const cohortKey = state.activeTab;
   const currentCohortDef = CURRICULUM_DEFINITION[cohortKey];
@@ -1631,7 +1670,7 @@ function updateTableManualTotals() {
     grandCalc += calcVal;
   });
 
-  // 1. 각 그룹 소계 셀 및 헤더 배지 갱신
+  // 1. 각 그룹 소계 셀 및 헤더 배지, 학급당 인원 갱신
   Object.keys(groupTotals).forEach(gName => {
     const manVal = groupTotals[gName];
     const calcVal = groupCalcs[gName];
@@ -1643,6 +1682,14 @@ function updateTableManualTotals() {
     // Subtotal note
     const subNote = document.querySelector(`[data-group-note="${gName}"]`);
     if (subNote) subNote.textContent = `${manVal}개 반`;
+
+    // Subtotal 학급당 인원 갱신
+    const grpAvgCell = document.querySelector(`[data-group-avg="${gName}"]`);
+    if (grpAvgCell) {
+      const grpCount = parseInt(grpAvgCell.getAttribute('data-group-count'), 10) || 0;
+      grpAvgCell.textContent = formatClassAvg(grpCount, manVal);
+      grpAvgCell.title = manVal > 0 ? `${grpCount}명 ÷ ${manVal}반 = ${(grpCount / manVal).toFixed(2)}명` : '';
+    }
 
     // Group header badge
     const grpBadge = document.querySelector(`[data-group-badge="${gName}"]`);
@@ -1661,7 +1708,7 @@ function updateTableManualTotals() {
     }
   });
 
-  // 2. 전체 총계 셀 및 설명 갱신
+  // 2. 전체 총계 셀 및 설명, 총계 학급당 인원 갱신
   const grandCell = document.getElementById('grand-manual-sections');
   if (grandCell) grandCell.textContent = `${grandManual}개 반`;
 
@@ -1675,6 +1722,13 @@ function updateTableManualTotals() {
   if (grandBreakdown) {
     const breakdownStr = Object.keys(groupTotals).map(g => `${g}: ${groupTotals[g]}개반`).join(' + ');
     grandBreakdown.textContent = `(${breakdownStr})`;
+  }
+
+  const grandAvgCell = document.getElementById('grand-total-avg-cell');
+  if (grandAvgCell) {
+    const grandCount = parseInt(grandAvgCell.getAttribute('data-grand-count'), 10) || 0;
+    grandAvgCell.textContent = formatClassAvg(grandCount, grandManual);
+    grandAvgCell.title = grandManual > 0 ? `${grandCount}명 ÷ ${grandManual}반 = ${(grandCount / grandManual).toFixed(2)}명` : '';
   }
 
   if (window.lucide) {
@@ -2346,7 +2400,7 @@ async function downloadCohortPdfReport(cohortKey) {
   if (designatedSubjects.length > 0) {
     tableRowsHtml += `
       <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #94a3b8; border-bottom:1px solid #cbd5e1;">
-        <td colspan="10" style="padding:5px 8px; text-align:left; color:#334155; font-size:10px;">
+        <td colspan="11" style="padding:5px 8px; text-align:left; color:#334155; font-size:10px;">
           📌 <strong>학교 지정 과목</strong> (해당 학년 전체 학생 필수 이수 · 총 ${designatedSubjects.length}개 과목)
         </td>
       </tr>
@@ -2360,6 +2414,7 @@ async function downloadCohortPdfReport(cohortKey) {
           <td style="padding:4px 5px; text-align:center; color:#64748b; font-size:9.5px;">학교지정</td>
           <td style="padding:4px 5px; text-align:center; font-weight:700;">${sub.units || 3}학점</td>
           <td style="padding:4px 6px; text-align:right; font-weight:700;">${sub.count}명</td>
+          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
           <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
           <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
           <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
@@ -2382,7 +2437,7 @@ async function downloadCohortPdfReport(cohortKey) {
         <td colspan="6" style="padding:5px 8px; text-align:left; color:#312e81; font-size:10px;">
           🎯 <strong>${gName}</strong> (${subs.length}개 개설 후보 과목 중 학생 수요 선택)
         </td>
-        <td colspan="4" style="padding:5px 8px; text-align:right; color:#4338ca; font-size:10px;">
+        <td colspan="5" style="padding:5px 8px; text-align:right; color:#4338ca; font-size:10px;">
           학생수/25: <strong>${grpRatio}</strong>  |  예상: <strong>${grpCalc}개반</strong>  |  확정: <strong>${grpManual}개반</strong>
         </td>
       </tr>
@@ -2406,6 +2461,7 @@ async function downloadCohortPdfReport(cohortKey) {
           <td style="padding:4px 5px; text-align:center; font-weight:600; color:#475569; background:#f8fafc;">${ratio}</td>
           <td style="padding:4px 5px; text-align:center; font-weight:700; color:#4338ca;">${calcSec}개 반</td>
           <td style="padding:4px 5px; text-align:center; font-weight:900; ${isDiff ? 'color:#7c3aed; background:#f3e8ff;' : 'color:#1e1b4b;'}">${manSec}개 반</td>
+          <td style="padding:4px 5px; text-align:center; font-weight:700; color:#334155; background:#f8fafc;">${formatClassAvg(sub.count, manSec)}</td>
           <td style="padding:4px 6px; text-align:right; color:#475569;">${sub.rate}%</td>
         </tr>
       `;
@@ -2422,6 +2478,7 @@ async function downloadCohortPdfReport(cohortKey) {
         <td style="padding:4px 5px; text-align:center; font-weight:700; color:#334155; background:#f1f5f9;">${grpRatio}</td>
         <td style="padding:4px 5px; text-align:center; font-weight:900; color:#4338ca; background:#eef2ff;">${grpCalc}개 반</td>
         <td style="padding:4px 5px; text-align:center; font-weight:900; color:#6d28d9; background:#ede9fe;">${grpManual}개 반</td>
+        <td style="padding:4px 5px; text-align:center; font-weight:800; color:#1e1b4b; background:#f8fafc;">${formatClassAvg(grpCnt, grpManual)}</td>
         <td style="padding:4px 5px; text-align:center; font-size:9.5px; color:#4338ca; font-weight:600;">확정</td>
       </tr>
     `;
@@ -2439,6 +2496,7 @@ async function downloadCohortPdfReport(cohortKey) {
       <td style="padding:5px 5px; text-align:center; color:#312e81; background:#ddd6fe;">${grandRatio}</td>
       <td style="padding:5px 5px; text-align:center; color:#312e81; background:#e0e7ff;">${grandCalc}개 반</td>
       <td style="padding:5px 5px; text-align:center; color:#4c1d95; background:#ddd6fe;">${grandManual}개 반</td>
+      <td style="padding:5px 5px; text-align:center; font-weight:900; color:#4c1d95; background:#ddd6fe;">${formatClassAvg(totalStudentChoices, grandManual)}</td>
       <td style="padding:5px 5px; text-align:center; font-size:9.5px; color:#4338ca;">최종 확정</td>
     </tr>
   `;
@@ -2546,16 +2604,17 @@ async function downloadCohortPdfReport(cohortKey) {
     <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #cbd5e1; margin-bottom:10px;">
       <thead>
         <tr style="background:#1e293b; color:#ffffff; font-weight:800; text-align:center;">
-          <th style="padding:5px 4px; width:30px;">순위</th>
-          <th style="padding:5px 4px; width:60px;">교과 영역</th>
+          <th style="padding:5px 4px; width:28px;">순위</th>
+          <th style="padding:5px 4px; width:55px;">교과 영역</th>
           <th style="padding:5px 6px; text-align:left;">과목명</th>
-          <th style="padding:5px 4px; width:80px;">이수 구분</th>
-          <th style="padding:5px 4px; width:45px;">학점</th>
-          <th style="padding:5px 5px; width:55px; text-align:right;">신청 학생</th>
-          <th style="padding:5px 4px; width:60px; background:#334155;">학생수/25</th>
-          <th style="padding:5px 4px; width:65px;">예상 분반</th>
-          <th style="padding:5px 4px; width:65px; background:#4338ca;">확정 분반</th>
-          <th style="padding:5px 4px; width:50px; text-align:right;">선택률</th>
+          <th style="padding:5px 4px; width:65px;">지정/선택</th>
+          <th style="padding:5px 4px; width:40px;">학점</th>
+          <th style="padding:5px 5px; width:52px; text-align:right;">신청 학생</th>
+          <th style="padding:5px 4px; width:52px; background:#334155;">학생수/25</th>
+          <th style="padding:5px 4px; width:58px;">예상 분반</th>
+          <th style="padding:5px 4px; width:58px; background:#4338ca;">확정 분반</th>
+          <th style="padding:5px 4px; width:58px; background:#3730a3;">학급당 인원</th>
+          <th style="padding:5px 4px; width:48px; text-align:right;">선택률</th>
         </tr>
       </thead>
       <tbody>
@@ -2708,14 +2767,14 @@ function exportCurrentTableToExcel() {
     [`정명고등학교 2027학년도 교육과정 과목 선택 및 분반 편성 현황 (${cleanCohortName})`],
     [`작성 기준: 학급당 ${simSize}명 기준  |  총 학생수: ${cohort.students?.length || 0}명  |  작성일자: ${new Date().toLocaleDateString('ko-KR')}  |  확정 분반 수(직접 입력) 포함`],
     [],
-    ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '학생수/25', `예상 분반 (${simSize}명 기준)`, '확정 분반 (직접 입력)', '선택률(%)', '주당 필요 시수']
+    ['순위', '교과 영역', '과목명', '지정/선택', '학점', '선택 학생수', '학생수/25', '예상 분반', '확정 분반', '학급당 인원', '선택률(%)', '주당 필요 시수']
   ];
 
   let rank = 1;
 
   // 1. 학교 지정 과목
   if (designatedSubjects.length > 0) {
-    exportData.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '']);
+    exportData.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '', '']);
     designatedSubjects.forEach(s => {
       exportData.push([
         rank++,
@@ -2724,6 +2783,7 @@ function exportCurrentTableToExcel() {
         s.group || '학교지정',
         s.units || 3,
         s.count,
+        '-',
         '-',
         '-',
         '-',
@@ -2766,12 +2826,13 @@ function exportCurrentTableToExcel() {
       const groupCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
       let groupHours = 0;
 
-      exportData.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, '', '']);
+      exportData.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, `${formatClassAvg(groupCnt, groupManualSec)}명`, '', '']);
 
       subs.forEach(s => {
         const sections = Math.round(s.count / simSize);
         const manualSec = getSubjectManualSections(currentKey, s.name, sections);
         const hours = manualSec * (s.units || 3);
+        const classAvg = manualSec > 0 ? (s.count / manualSec % 1 === 0 ? s.count / manualSec : Number((s.count / manualSec).toFixed(2))) : '-';
         groupHours += hours;
         exportData.push([
           rank++,
@@ -2783,6 +2844,7 @@ function exportCurrentTableToExcel() {
           Number((s.count / 25).toFixed(2)),
           `${sections}개 반`,
           `${manualSec}개 반`,
+          classAvg,
           s.rate + '%',
           hours
         ]);
@@ -2794,6 +2856,7 @@ function exportCurrentTableToExcel() {
       overallHours += groupHours;
 
       // Group Subtotal row
+      const groupAvg = groupManualSec > 0 ? (groupCnt / groupManualSec % 1 === 0 ? groupCnt / groupManualSec : Number((groupCnt / groupManualSec).toFixed(2))) : '-';
       exportData.push([
         '소계',
         gName,
@@ -2804,12 +2867,14 @@ function exportCurrentTableToExcel() {
         Number((groupCnt / 25).toFixed(2)),
         `${groupCalcSec}개 반`,
         `${groupManualSec}개 반`,
+        groupAvg,
         '',
         groupHours
       ]);
     });
 
     // Grand total row
+    const overallAvg = overallManualSec > 0 ? (overallCount / overallManualSec % 1 === 0 ? overallCount / overallManualSec : Number((overallCount / overallManualSec).toFixed(2))) : '-';
     exportData.push([
       '총계',
       '학생선택 전체',
@@ -2820,6 +2885,7 @@ function exportCurrentTableToExcel() {
       Number((overallCount / 25).toFixed(2)),
       `${overallCalcSec}개 반`,
       `${overallManualSec}개 반`,
+      overallAvg,
       '',
       overallHours
     ]);
@@ -2832,12 +2898,13 @@ function exportCurrentTableToExcel() {
     { wch: 8 },  // 순위
     { wch: 14 }, // 교과 영역
     { wch: 24 }, // 과목명
-    { wch: 20 }, // 이수 구분
+    { wch: 18 }, // 지정/선택
     { wch: 8 },  // 학점
     { wch: 14 }, // 선택 학생수
     { wch: 12 }, // 학생수/25
-    { wch: 18 }, // 예상 분반
-    { wch: 18 }, // 확정 분반
+    { wch: 16 }, // 예상 분반
+    { wch: 16 }, // 확정 분반
+    { wch: 14 }, // 학급당 인원
     { wch: 12 }, // 선택률
     { wch: 14 }  // 필요 시수
   ];
@@ -2852,8 +2919,8 @@ function exportCurrentTableToExcel() {
 
   // Merged title rows
   ws['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } }
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }
   ];
 
   const wb = XLSX.utils.book_new();
@@ -3098,7 +3165,7 @@ function exportMasterSummaryToExcel() {
     ['정명고등학교 2027학년도 전 학년·학기 과목선택 및 분반 편성 종합 보고서'],
     [`분석 기준: 학급당 ${simSize}명 기준  |  전체 분석 학생: ${allTotalStudents}명(연인원)  |  총 편제 과목: ${allTotalSubjects}개  |  작성일자: ${todayStr}  |  확정 분반(사용자 직접 입력값) 포함`],
     [],
-    ['대상 학기', '순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '신청 학생수', '학생수/25', `예상 분반 (${simSize}명 기준)`, '확정 분반 (직접 입력)', '선택률(%)', '주당 필요 시수']
+    ['대상 학기', '순위', '교과 영역', '과목명', '지정/선택', '학점', '신청 학생수', '학생수/25', '예상 분반', '확정 분반', '학급당 인원', '선택률(%)', '주당 필요 시수']
   ];
 
   let grandCalcSec = 0;
@@ -3117,13 +3184,14 @@ function exportMasterSummaryToExcel() {
     let cohortHours = 0;
 
     // Cohort separator header
-    masterRows.push([`▶ ${cohortName}`, '', '', '', '', '', '', '', '', '', '', '']);
+    masterRows.push([`▶ ${cohortName}`, '', '', '', '', '', '', '', '', '', '', '', '']);
 
     ch.subjects.forEach((s, idx) => {
       const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
       const sections = isDesignated ? '-' : Math.round(s.count / simSize);
       const manualVal = isDesignated ? '-' : getSubjectManualSections(key, s.name, sections);
       const hours = isDesignated ? '-' : (manualVal * (s.units || 3));
+      const classAvg = isDesignated ? '-' : (manualVal > 0 ? (s.count / manualVal % 1 === 0 ? s.count / manualVal : Number((s.count / manualVal).toFixed(2))) : '-');
 
       if (!isDesignated) {
         cohortCalcSec += sections;
@@ -3143,12 +3211,14 @@ function exportMasterSummaryToExcel() {
         isDesignated ? '-' : Number((s.count / 25).toFixed(2)),
         isDesignated ? '-' : `${sections}개 반`,
         isDesignated ? '-' : `${manualVal}개 반`,
+        classAvg,
         s.rate + '%',
         hours
       ]);
     });
 
     // Cohort Subtotal Row
+    const cohortAvg = cohortManualSec > 0 ? (cohortStudents / cohortManualSec % 1 === 0 ? cohortStudents / cohortManualSec : Number((cohortStudents / cohortManualSec).toFixed(2))) : '-';
     masterRows.push([
       `[소계] ${cohortName}`,
       '소계',
@@ -3160,6 +3230,7 @@ function exportMasterSummaryToExcel() {
       Number((cohortStudents / 25).toFixed(2)),
       `${cohortCalcSec}개 반`,
       `${cohortManualSec}개 반`,
+      cohortAvg,
       '',
       cohortHours
     ]);
@@ -3172,6 +3243,7 @@ function exportMasterSummaryToExcel() {
   });
 
   // Grand Total Row
+  const grandAvg = grandManualSec > 0 ? (grandStudents / grandManualSec % 1 === 0 ? grandStudents / grandManualSec : Number((grandStudents / grandManualSec).toFixed(2))) : '-';
   masterRows.push([
     '★ 전 학기 통합 총계',
     '총계',
@@ -3183,6 +3255,7 @@ function exportMasterSummaryToExcel() {
     Number((grandStudents / 25).toFixed(2)),
     `${grandCalcSec}개 반`,
     `${grandManualSec}개 반`,
+    grandAvg,
     '',
     grandHours
   ]);
@@ -3193,12 +3266,13 @@ function exportMasterSummaryToExcel() {
     { wch: 8 },  // 순위
     { wch: 12 }, // 교과 영역
     { wch: 26 }, // 과목명
-    { wch: 22 }, // 이수 구분
+    { wch: 18 }, // 지정/선택
     { wch: 8 },  // 학점
     { wch: 14 }, // 신청 학생수
     { wch: 12 }, // 학생수/25
-    { wch: 18 }, // 예상 분반
-    { wch: 18 }, // 확정 분반
+    { wch: 16 }, // 예상 분반
+    { wch: 16 }, // 확정 분반
+    { wch: 14 }, // 학급당 인원
     { wch: 12 }, // 선택률
     { wch: 14 }  // 주당 필요 시수
   ];
@@ -3209,8 +3283,8 @@ function exportMasterSummaryToExcel() {
     { hpt: 26 }  // Header
   ];
   wsMaster['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } }
   ];
   XLSX.utils.book_append_sheet(wb, wsMaster, '전체학기_통합현황');
 
@@ -3229,14 +3303,14 @@ function exportMasterSummaryToExcel() {
       [`정명고등학교 2027학년도 교육과정 과목선택 및 분반 편성 현황 (${cleanCohortName})`],
       [`작성 기준: 학급당 ${simSize}명 기준  |  총 학생수: ${ch.students?.length || 0}명  |  작성일자: ${todayStr}  |  확정 분반(사용자 직접 입력) 포함`],
       [],
-      ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '학생수/25', `예상 분반 (${simSize}명 기준)`, '확정 분반 (직접 입력)', '선택률(%)', '주당 필요 시수']
+      ['순위', '교과 영역', '과목명', '지정/선택', '학점', '선택 학생수', '학생수/25', '예상 분반', '확정 분반', '학급당 인원', '선택률(%)', '주당 필요 시수']
     ];
 
     let rank = 1;
 
     // 1. 학교 지정 과목
     if (designatedSubjects.length > 0) {
-      sheetRows.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '']);
+      sheetRows.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '', '']);
       designatedSubjects.forEach(s => {
         sheetRows.push([
           rank++,
@@ -3245,6 +3319,7 @@ function exportMasterSummaryToExcel() {
           s.group || '학교지정',
           s.units || 3,
           s.count,
+          '-',
           '-',
           '-',
           '-',
@@ -3287,12 +3362,13 @@ function exportMasterSummaryToExcel() {
         const groupCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
         let groupHours = 0;
 
-        sheetRows.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, '', '']);
+        sheetRows.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, `${formatClassAvg(groupCnt, groupManualSec)}명`, '', '']);
 
         subs.forEach(s => {
           const sections = Math.round(s.count / simSize);
           const manualSec = getSubjectManualSections(key, s.name, sections);
           const hours = manualSec * (s.units || 3);
+          const classAvg = manualSec > 0 ? (s.count / manualSec % 1 === 0 ? s.count / manualSec : Number((s.count / manualSec).toFixed(2))) : '-';
           groupHours += hours;
           sheetRows.push([
             rank++,
@@ -3304,6 +3380,7 @@ function exportMasterSummaryToExcel() {
             Number((s.count / 25).toFixed(2)),
             `${sections}개 반`,
             `${manualSec}개 반`,
+            classAvg,
             s.rate + '%',
             hours
           ]);
@@ -3315,6 +3392,7 @@ function exportMasterSummaryToExcel() {
         overallHours += groupHours;
 
         // Group Subtotal row
+        const groupAvg = groupManualSec > 0 ? (groupCnt / groupManualSec % 1 === 0 ? groupCnt / groupManualSec : Number((groupCnt / groupManualSec).toFixed(2))) : '-';
         sheetRows.push([
           '소계',
           gName,
@@ -3325,12 +3403,14 @@ function exportMasterSummaryToExcel() {
           Number((groupCnt / 25).toFixed(2)),
           `${groupCalcSec}개 반`,
           `${groupManualSec}개 반`,
+          groupAvg,
           '',
           groupHours
         ]);
       });
 
       // Grand total row
+      const overallAvg = overallManualSec > 0 ? (overallCount / overallManualSec % 1 === 0 ? overallCount / overallManualSec : Number((overallCount / overallManualSec).toFixed(2))) : '-';
       sheetRows.push([
         '총계',
         '학생선택 전체',
@@ -3341,6 +3421,7 @@ function exportMasterSummaryToExcel() {
         Number((overallCount / 25).toFixed(2)),
         `${overallCalcSec}개 반`,
         `${overallManualSec}개 반`,
+        overallAvg,
         '',
         overallHours
       ]);
@@ -3357,12 +3438,13 @@ function exportMasterSummaryToExcel() {
       { wch: 8 },  // 순위
       { wch: 14 }, // 교과 영역
       { wch: 24 }, // 과목명
-      { wch: 20 }, // 이수 구분
+      { wch: 18 }, // 지정/선택
       { wch: 8 },  // 학점
       { wch: 14 }, // 선택 학생수
       { wch: 12 }, // 학생수/25
-      { wch: 18 }, // 예상 분반
-      { wch: 18 }, // 확정 분반
+      { wch: 16 }, // 예상 분반
+      { wch: 16 }, // 확정 분반
+      { wch: 14 }, // 학급당 인원
       { wch: 12 }, // 선택률
       { wch: 14 }  // 필요 시수
     ];
@@ -3373,8 +3455,8 @@ function exportMasterSummaryToExcel() {
       { hpt: 25 }
     ];
     wsCohort['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } }
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } }
     ];
     XLSX.utils.book_append_sheet(wb, wsCohort, tabShortName);
   });
