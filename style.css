@@ -990,6 +990,57 @@ body {
   background-color: #F3EDFF !important;
 }
 
+/* Choice Group Subtotal Row (선택군별 소계 행) */
+.group-subtotal-row td {
+  background-color: #F8FAFC !important;
+  font-weight: 700 !important;
+  border-top: 1px dashed #CBD5E1 !important;
+  border-bottom: 2px solid #94A3B8 !important;
+  padding: 10px 14px !important;
+}
+.group-subtotal-row.group-row-tak4 td {
+  background-color: #F1F5FD !important;
+  border-bottom: 2px solid #93C5FD !important;
+}
+.group-subtotal-row.group-row-tak1 td {
+  background-color: #FEF9EE !important;
+  border-bottom: 2px solid #FCD34D !important;
+}
+.group-subtotal-row.group-row-tak5 td {
+  background-color: #EDFAF3 !important;
+  border-bottom: 2px solid #6EE7B7 !important;
+}
+.group-subtotal-row.group-row-tak2 td {
+  background-color: #F8F1FF !important;
+  border-bottom: 2px solid #D8B4FE !important;
+}
+.group-subtotal-row .subtotal-section-cell {
+  background-color: #EEF2FF !important;
+  color: #4338CA !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  border-left: 2px solid #C7D2FE !important;
+  border-right: 2px solid #C7D2FE !important;
+}
+
+/* Overall Grand Total Row (학생선택 과목 전체 분반 총계 행) */
+.table-grand-total-row td {
+  background-color: #F5F3FF !important;
+  color: #1E1B4B !important;
+  font-weight: 800 !important;
+  border-top: 3px solid #6366F1 !important;
+  border-bottom: 3px solid #6366F1 !important;
+  padding: 12px 14px !important;
+}
+.table-grand-total-row .grand-total-section-cell {
+  background-color: #EDE9FE !important;
+  color: #4C1D95 !important;
+  font-size: 1.15rem !important;
+  font-weight: 900 !important;
+  border-left: 2px solid #A78BFA !important;
+  border-right: 2px solid #A78BFA !important;
+}
+
 /* Print Optimization */
 @media print {
   body {

@@ -1,7 +1,4 @@
-/**
- * 정명고등학교 2027학년도 과목 선택 결과 분석 대시보드
- * School Official Curriculum Definition & Universal 0/1 Matrix Parser
- */
+window.APP_LOADED = true;
 
 // -------------------------------------------------------------
 // Official School Curriculum Definition (2026 & 2025 입학생)
@@ -1216,6 +1213,13 @@ function renderSubjectTable(subjects, totalCount) {
   });
 
   document.getElementById('table-row-count').textContent = `총 ${filtered.length}개 과목`;
+  const badgesEl = document.getElementById('table-group-section-badges');
+  if (badgesEl) badgesEl.innerHTML = '';
+
+  const simHeaderTh = document.querySelector('#subject-table thead th:nth-child(7)');
+  if (simHeaderTh) {
+    simHeaderTh.textContent = `예상 분반 수 (${state.simClassSize || 25}명 기준)`;
+  }
 
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:32px; color:#94A3B8;">조건에 맞는 과목이 없습니다.</td></tr>`;
@@ -1364,31 +1368,135 @@ function renderSubjectTable(subjects, totalCount) {
       return a.localeCompare(b, 'ko');
     });
 
+    const simSize = state.simClassSize || 25;
+    let grandElectiveSections = 0;
+    let grandElectiveCount = 0;
+    const groupSummaries = [];
+
     sortedGroupNames.forEach(gName => {
       const subsInGroup = groupMap.get(gName);
       const repBadge = subsInGroup[0]?.badge || '';
       const styleMeta = getGroupStyleMeta(gName, repBadge);
 
+      // 선택군 내 과목별 예상 분반 수 합계 및 선택인원 합계
+      const groupSections = subsInGroup.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+      const groupStudents = subsInGroup.reduce((sum, s) => sum + (s.count || 0), 0);
+
+      grandElectiveSections += groupSections;
+      grandElectiveCount += groupStudents;
+      groupSummaries.push({
+        name: gName,
+        badge: repBadge,
+        sections: groupSections,
+        count: groupStudents,
+        subsCount: subsInGroup.length,
+        badgeClass: styleMeta.badgeClass
+      });
+
+      // 1. 선택군 그룹 헤더 (분반 수 총계 배지 강조)
       const grpTr = document.createElement('tr');
       grpTr.className = `table-group-header ${styleMeta.headerClass}`;
       grpTr.innerHTML = `
         <td colspan="9">
-          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-            <span>
-              <i data-lucide="${styleMeta.icon}" style="width:16px; height:16px; vertical-align:middle; margin-right:6px;"></i>
-              🎯 <strong>${gName}</strong> (${subsInGroup.length}개 개설 후보 과목 중 학생 수요 선택)
-            </span>
-            <span class="badge ${styleMeta.badgeClass}" style="font-weight:700;">총 ${subsInGroup.length}개 과목</span>
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <i data-lucide="${styleMeta.icon}" style="width:16px; height:16px; vertical-align:middle;"></i>
+              🎯 <strong>${gName}</strong>
+              <span style="font-size:0.82rem; color:#475569; font-weight:normal;">(${subsInGroup.length}개 개설 후보 과목 중 학생 수요 선택)</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span class="badge ${styleMeta.badgeClass}" style="font-weight:700;">총 ${subsInGroup.length}개 과목</span>
+              <span class="badge" style="font-weight:800; font-size:0.85rem; padding:4px 10px; background:#EEF2FF; color:#4338CA; border:1px solid #C7D2FE; display:inline-flex; align-items:center; gap:4px;">
+                <i data-lucide="layers" style="width:13px; height:13px;"></i>
+                예상 분반 수 합계: <strong style="font-size:0.95rem; color:#3730A3;">${groupSections}개 반</strong>
+              </span>
+            </div>
           </div>
         </td>
       `;
       tbody.appendChild(grpTr);
 
+      // 2. 개별 과목 렌더링
       const sortedGroupSubs = [...subsInGroup].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ko'));
       sortedGroupSubs.forEach(sub => {
         tbody.appendChild(renderRow(sub, globalRank++, false, styleMeta.rowClass));
       });
+
+      // 3. 선택군별 소계 행 (Group Subtotal Row)
+      const subtotalTr = document.createElement('tr');
+      subtotalTr.className = `group-subtotal-row ${styleMeta.rowClass}`;
+      subtotalTr.innerHTML = `
+        <td style="text-align:center; font-weight:700; color:#64748B; font-size:0.82rem;">소계</td>
+        <td style="text-align:center;"><span class="badge ${styleMeta.badgeClass}" style="font-size:0.75rem;">${repBadge || '선택'}</span></td>
+        <td colspan="2" style="font-weight:700; color:#1E293B;">
+          <span style="color:#4F46E5; margin-right:4px;">∑</span> <strong>[${gName}] 분반 수 총계</strong>
+          <span style="font-size:0.8rem; font-weight:normal; color:#64748B; margin-left:6px;">(${subsInGroup.length}개 과목 합산)</span>
+        </td>
+        <td style="text-align:center; color:#64748B; font-size:0.82rem;">-</td>
+        <td style="text-align:right; font-weight:800; color:#0F172A; font-size:0.95rem; white-space:nowrap;">
+          ${groupStudents.toLocaleString()}명
+        </td>
+        <td style="text-align:center; white-space:nowrap;" class="subtotal-section-cell">
+          ${groupSections}개 반
+        </td>
+        <td colspan="2" style="color:#475569; font-size:0.82rem; vertical-align:middle;">
+          <span style="display:inline-flex; align-items:center; gap:4px; font-weight:600;">
+            <i data-lucide="check-circle-2" style="width:14px; height:14px; color:#10B981;"></i>
+            ${gName} 분반 합계: <strong style="color:#4338CA;">${groupSections}개 반</strong> (${simSize}명 기준)
+          </span>
+        </td>
+      `;
+      tbody.appendChild(subtotalTr);
     });
+
+    // 4. 학생선택 과목 전체 분반 총계 행 (Table Grand Total Row)
+    if (sortedGroupNames.length > 0) {
+      const grandTr = document.createElement('tr');
+      grandTr.className = 'table-grand-total-row';
+      const detailBreakdown = groupSummaries.map(g => `${g.name}: ${g.sections}개반`).join(' + ');
+
+      grandTr.innerHTML = `
+        <td style="text-align:center; font-weight:800; color:#3730A3; font-size:0.85rem;">총계</td>
+        <td style="text-align:center;"><span class="badge badge-purple" style="font-size:0.75rem;">학생선택</span></td>
+        <td colspan="2" style="color:#1E1B4B; font-weight:800; font-size:0.95rem;">
+          🎯 <strong>학생선택 과목 전체 분반 총계</strong>
+          <span style="font-size:0.8rem; font-weight:normal; color:#4F46E5; margin-left:8px;">(${detailBreakdown})</span>
+        </td>
+        <td style="text-align:center; color:#64748B; font-size:0.82rem;">-</td>
+        <td style="text-align:right; font-weight:900; color:#1E1B4B; font-size:1rem; white-space:nowrap;">
+          ${grandElectiveCount.toLocaleString()}명
+        </td>
+        <td style="text-align:center; white-space:nowrap;" class="grand-total-section-cell">
+          ${grandElectiveSections}개 반
+        </td>
+        <td colspan="2" style="color:#3730A3; font-size:0.85rem; font-weight:700;">
+          전체 학생선택 예상 분반: <strong style="color:#1E1B4B; font-size:1rem;">${grandElectiveSections}개 반</strong> (개설 학급 합계)
+        </td>
+      `;
+      tbody.appendChild(grandTr);
+    }
+
+    // 5. 카드 우측 상단 요약 배지 렌더링
+    if (badgesEl && groupSummaries.length > 0) {
+      groupSummaries.forEach(g => {
+        const badge = document.createElement('span');
+        badge.className = `badge ${g.badgeClass}`;
+        badge.style.fontWeight = '700';
+        badge.style.fontSize = '0.8rem';
+        badge.textContent = `${g.name}: ${g.sections}개 반`;
+        badgesEl.appendChild(badge);
+      });
+
+      if (groupSummaries.length > 1) {
+        const totalBadge = document.createElement('span');
+        totalBadge.className = 'badge badge-purple';
+        totalBadge.style.fontWeight = '800';
+        totalBadge.style.fontSize = '0.8rem';
+        totalBadge.style.border = '1px solid #C4B5FD';
+        totalBadge.textContent = `선택 분반 총계: ${grandElectiveSections}개 반`;
+        badgesEl.appendChild(totalBadge);
+      }
+    }
   }
 
   if (window.lucide) {
@@ -2018,26 +2126,115 @@ function exportCurrentTableToExcel() {
     return;
   }
 
+  const simSize = state.simClassSize || 25;
   const exportData = [
-    ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', '예상 분반 수 (25명 기준)', '선택률(%)', '주당 필요 시수']
+    ['순위', '교과 영역', '과목명', '이수 구분(선택군)', '학점', '선택 학생수', `예상 분반 수 (${simSize}명 기준)`, '선택률(%)', '주당 필요 시수']
   ];
 
-  cohort.subjects.forEach((s, idx) => {
-    const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
-    const sections = isDesignated ? '-' : Math.round(s.count / 25);
-    const hours = isDesignated ? '-' : (sections * (s.units || 3));
+  const designatedSubjects = cohort.subjects.filter(s => s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
+  const electiveSubjects = cohort.subjects.filter(s => !(s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정'));
+
+  let rank = 1;
+
+  // 1. 학교 지정 과목
+  if (designatedSubjects.length > 0) {
+    exportData.push(['[학교 지정 과목]', '', '', '', '', '', '', '', '']);
+    designatedSubjects.forEach(s => {
+      exportData.push([
+        rank++,
+        s.category,
+        s.name,
+        s.group || '학교지정',
+        s.units || 3,
+        s.count,
+        '-',
+        s.rate + '%',
+        '-'
+      ]);
+    });
+  }
+
+  // 2. 학생 선택 과목 (선택군별 그룹핑 및 소계)
+  if (electiveSubjects.length > 0) {
+    const currentCohortDef = CURRICULUM_DEFINITION[currentKey];
+    const orderedGroupNames = currentCohortDef?.groups?.map(g => g.name) || [];
+
+    const groupMap = new Map();
+    electiveSubjects.forEach(sub => {
+      const gName = sub.group || '학생선택 과목';
+      if (!groupMap.has(gName)) groupMap.set(gName, []);
+      groupMap.get(gName).push(sub);
+    });
+
+    const sortedGroupNames = Array.from(groupMap.keys()).sort((a, b) => {
+      const idxA = orderedGroupNames.indexOf(a);
+      const idxB = orderedGroupNames.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b, 'ko');
+    });
+
+    let overallSec = 0;
+    let overallCount = 0;
+    let overallHours = 0;
+
+    sortedGroupNames.forEach(gName => {
+      const subs = groupMap.get(gName);
+      const groupSec = subs.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+      const groupCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
+      let groupHours = 0;
+
+      exportData.push([`[${gName}]`, '', '', '', '', '', `분반 합계: ${groupSec}개 반`, '', '']);
+
+      subs.forEach(s => {
+        const sections = Math.round(s.count / simSize);
+        const hours = sections * (s.units || 3);
+        groupHours += hours;
+        exportData.push([
+          rank++,
+          s.category,
+          s.name,
+          s.group || s.type,
+          s.units || 3,
+          s.count,
+          `${sections}개 분반`,
+          s.rate + '%',
+          hours
+        ]);
+      });
+
+      overallSec += groupSec;
+      overallCount += groupCnt;
+      overallHours += groupHours;
+
+      // Group Subtotal row
+      exportData.push([
+        '소계',
+        gName,
+        `[${gName}] 분반 수 총계`,
+        '',
+        '',
+        groupCnt,
+        `${groupSec}개 반`,
+        '',
+        groupHours
+      ]);
+    });
+
+    // Grand total row
     exportData.push([
-      idx + 1,
-      s.category,
-      s.name,
-      s.group || s.type,
-      s.units || 3,
-      s.count,
-      sections,
-      s.rate + '%',
-      hours
+      '총계',
+      '학생선택 전체',
+      '학생선택 과목 전체 분반 총계',
+      '',
+      '',
+      overallCount,
+      `${overallSec}개 반`,
+      '',
+      overallHours
     ]);
-  });
+  }
 
   const ws = XLSX.utils.aoa_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
