@@ -3,15 +3,78 @@ window.APP_LOADED = true;
 // -------------------------------------------------------------
 // Official School Curriculum Definition (2026 & 2025 입학생)
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// Official 2022 Revised National Curriculum Category Order & Helpers
+// 국어 -> 수학 -> 영어 -> 사회 -> 과학 -> 체육 -> 음악 -> 미술 -> 제2외국어 -> 정보 -> 한문 -> 교양
+// -------------------------------------------------------------
+const CATEGORY_SORT_ORDER = [
+  '국어',
+  '수학',
+  '영어',
+  '사회',
+  '과학',
+  '체육',
+  '음악',
+  '미술',
+  '제2외국어',
+  '정보',
+  '한문',
+  '교양',
+  // Fallback / legacy groups
+  '기초',
+  '체육·예술',
+  '예체능',
+  '생활·교양',
+  '생활교양'
+];
+
+function getCategorySortIndex(cat) {
+  const idx = CATEGORY_SORT_ORDER.indexOf(cat);
+  return idx === -1 ? 999 : idx;
+}
+
+function getCategoryBadgeClass(category) {
+  switch (category) {
+    case '국어': return 'badge-purple';
+    case '수학': return 'badge-blue';
+    case '영어': return 'badge-indigo';
+    case '사회': return 'badge-amber';
+    case '과학': return 'badge-green';
+    case '체육': return 'badge-pink';
+    case '음악': return 'badge-pink';
+    case '미술': return 'badge-pink';
+    case '제2외국어': return 'badge-purple';
+    case '정보': return 'badge-teal';
+    case '한문': return 'badge-amber';
+    case '교양': return 'badge-gray';
+    // Fallback compatibility
+    case '기초': return 'badge-purple';
+    case '예체능':
+    case '체육·예술': return 'badge-pink';
+    case '생활교양':
+    case '생활·교양': return 'badge-amber';
+    default: return 'badge-gray';
+  }
+}
+
+function matchCategoryFilter(itemCategory, filterValue) {
+  if (!filterValue || filterValue === 'all') return true;
+  if (filterValue === itemCategory) return true;
+  if (filterValue === '기초') return ['국어', '수학', '영어', '기초'].includes(itemCategory);
+  if (filterValue === '체육·예술' || filterValue === '예체능') return ['체육', '음악', '미술', '예체능', '체육·예술'].includes(itemCategory);
+  if (filterValue === '생활·교양' || filterValue === '생활교양') return ['제2외국어', '정보', '한문', '교양', '생활교양', '생활·교양'].includes(itemCategory);
+  return false;
+}
+
 const CURRICULUM_DEFINITION = {
   '2026_2_1': {
     name: '2026 입학생 (2학년 1학기)',
     designated: [
-      { name: '대수', category: '기초', units: 3 },
-      { name: '문학', category: '기초', units: 3 },
-      { name: '스포츠 생활1', category: '예체능', units: 2 },
-      { name: '영어Ⅰ', category: '기초', units: 3 },
-      { name: '확률과 통계', category: '기초', units: 3 }
+      { name: '문학', category: '국어', units: 3 },
+      { name: '대수', category: '수학', units: 3 },
+      { name: '확률과 통계', category: '수학', units: 3 },
+      { name: '영어Ⅰ', category: '영어', units: 3 },
+      { name: '스포츠 생활1', category: '체육', units: 2 }
     ],
     groups: [
       {
@@ -36,10 +99,10 @@ const CURRICULUM_DEFINITION = {
         badge: '택1',
         requiredCount: 1,
         subjects: [
-          { name: '중국어', category: '생활교양', units: 3 },
-          { name: '일본어', category: '생활교양', units: 3 },
-          { name: '정보', category: '생활교양', units: 3 },
-          { name: '한문', category: '생활교양', units: 3 }
+          { name: '중국어', category: '제2외국어', units: 3 },
+          { name: '일본어', category: '제2외국어', units: 3 },
+          { name: '정보', category: '정보', units: 3 },
+          { name: '한문', category: '한문', units: 3 }
         ]
       }
     ]
@@ -47,10 +110,10 @@ const CURRICULUM_DEFINITION = {
   '2026_2_2': {
     name: '2026 입학생 (2학년 2학기)',
     designated: [
-      { name: '독서와 작문', category: '기초', units: 3 },
-      { name: '미적분Ⅰ', category: '기초', units: 3 },
-      { name: '영어Ⅱ', category: '기초', units: 3 },
-      { name: '스포츠 생활2', category: '예체능', units: 2 }
+      { name: '독서와 작문', category: '국어', units: 3 },
+      { name: '미적분Ⅰ', category: '수학', units: 3 },
+      { name: '영어Ⅱ', category: '영어', units: 3 },
+      { name: '스포츠 생활2', category: '체육', units: 2 }
     ],
     groups: [
       {
@@ -59,9 +122,9 @@ const CURRICULUM_DEFINITION = {
         badge: '택5',
         requiredCount: 5,
         subjects: [
-          { name: '언어생활 탐구', category: '기초', units: 3 },
-          { name: '기하', category: '기초', units: 3 },
-          { name: '영미 문학 읽기', category: '기초', units: 3 },
+          { name: '언어생활 탐구', category: '국어', units: 3 },
+          { name: '기하', category: '수학', units: 3 },
+          { name: '영미 문학 읽기', category: '영어', units: 3 },
           { name: '법과 사회', category: '사회', units: 3 },
           { name: '윤리와 사상', category: '사회', units: 3 },
           { name: '동아시아 역사 기행', category: '사회', units: 3 },
@@ -80,10 +143,10 @@ const CURRICULUM_DEFINITION = {
         badge: '택1',
         requiredCount: 1,
         subjects: [
-          { name: '중국 문화', category: '생활교양', units: 3 },
-          { name: '일본어 회화', category: '생활교양', units: 3 },
-          { name: '인공지능 기초', category: '생활교양', units: 3 },
-          { name: '언어생활과 한자', category: '생활교양', units: 3 }
+          { name: '중국 문화', category: '제2외국어', units: 3 },
+          { name: '일본어 회화', category: '제2외국어', units: 3 },
+          { name: '인공지능 기초', category: '정보', units: 3 },
+          { name: '언어생활과 한자', category: '한문', units: 3 }
         ]
       }
     ]
@@ -91,10 +154,10 @@ const CURRICULUM_DEFINITION = {
   '2025_3_1': {
     name: '2025 입학생 (3학년 1학기)',
     designated: [
-      { name: '화법과 언어', category: '기초', units: 3 },
-      { name: '영어 독해와 작문', category: '기초', units: 3 },
-      { name: '스포츠 과학', category: '예체능', units: 1 },
-      { name: '음악감상과 비평', category: '예체능', units: 3 }
+      { name: '화법과 언어', category: '국어', units: 3 },
+      { name: '영어 독해와 작문', category: '영어', units: 3 },
+      { name: '스포츠 과학', category: '체육', units: 1 },
+      { name: '음악감상과 비평', category: '음악', units: 3 }
     ],
     groups: [
       {
@@ -103,8 +166,8 @@ const CURRICULUM_DEFINITION = {
         badge: '택1',
         requiredCount: 1,
         subjects: [
-          { name: '미적분Ⅱ', category: '기초', units: 3 },
-          { name: '경제수학', category: '기초', units: 3 }
+          { name: '미적분Ⅱ', category: '수학', units: 3 },
+          { name: '경제수학', category: '수학', units: 3 }
         ]
       },
       {
@@ -113,9 +176,9 @@ const CURRICULUM_DEFINITION = {
         badge: '택4',
         requiredCount: 4,
         subjects: [
-          { name: '문학과 영상', category: '기초', units: 3 },
-          { name: '인공지능 수학', category: '기초', units: 3 },
-          { name: '심화영어', category: '기초', units: 3 },
+          { name: '문학과 영상', category: '국어', units: 3 },
+          { name: '인공지능 수학', category: '수학', units: 3 },
+          { name: '심화영어', category: '영어', units: 3 },
           { name: '국제 관계의 이해', category: '사회', units: 3 },
           { name: '인문학과 윤리', category: '사회', units: 3 },
           { name: '도시의 미래 탐구', category: '사회', units: 3 },
@@ -132,10 +195,10 @@ const CURRICULUM_DEFINITION = {
         badge: '택1',
         requiredCount: 1,
         subjects: [
-          { name: '인간과 심리', category: '생활교양', units: 3 },
-          { name: '심화 일본어', category: '생활교양', units: 3 },
-          { name: '데이터 과학', category: '생활교양', units: 3 },
-          { name: '생활과 한문', category: '생활교양', units: 3 }
+          { name: '심화 일본어', category: '제2외국어', units: 3 },
+          { name: '데이터 과학', category: '정보', units: 3 },
+          { name: '생활과 한문', category: '한문', units: 3 },
+          { name: '인간과 심리', category: '교양', units: 3 }
         ]
       }
     ]
@@ -143,11 +206,11 @@ const CURRICULUM_DEFINITION = {
   '2025_3_2': {
     name: '2025 입학생 (3학년 2학기)',
     designated: [
-      { name: '독서 토론과 글쓰기', category: '기초', units: 3 },
-      { name: '심화 영어 독해와 작문', category: '기초', units: 3 },
-      { name: '스포츠 문화', category: '예체능', units: 1 },
-      { name: '미술감상과 비평', category: '예체능', units: 3 },
-      { name: '융합사고 수학', category: '기초', units: 3 }
+      { name: '독서 토론과 글쓰기', category: '국어', units: 3 },
+      { name: '융합사고 수학', category: '수학', units: 3 },
+      { name: '심화 영어 독해와 작문', category: '영어', units: 3 },
+      { name: '스포츠 문화', category: '체육', units: 1 },
+      { name: '미술감상과 비평', category: '미술', units: 3 }
     ],
     groups: [
       {
@@ -156,9 +219,9 @@ const CURRICULUM_DEFINITION = {
         badge: '택4',
         requiredCount: 4,
         subjects: [
-          { name: '주제 탐구 독서', category: '기초', units: 3 },
-          { name: '수학과 문화', category: '기초', units: 3 },
-          { name: '미디어 영어', category: '기초', units: 3 },
+          { name: '주제 탐구 독서', category: '국어', units: 3 },
+          { name: '수학과 문화', category: '수학', units: 3 },
+          { name: '미디어 영어', category: '영어', units: 3 },
           { name: '여행지리', category: '사회', units: 3 },
           { name: '윤리문제 탐구', category: '사회', units: 3 },
           { name: '금융과 경제생활', category: '사회', units: 3 },
@@ -174,10 +237,10 @@ const CURRICULUM_DEFINITION = {
         badge: '택1',
         requiredCount: 1,
         subjects: [
-          { name: '중국 언어와 역사의 이해1', category: '생활교양', units: 3 },
-          { name: '일본 문화', category: '생활교양', units: 3 },
-          { name: '소프트웨어와 생활', category: '생활교양', units: 3 },
-          { name: '한문고전읽기', category: '생활교양', units: 3 }
+          { name: '중국 언어와 역사의 이해1', category: '제2외국어', units: 3 },
+          { name: '일본 문화', category: '제2외국어', units: 3 },
+          { name: '소프트웨어와 생활', category: '정보', units: 3 },
+          { name: '한문고전읽기', category: '한문', units: 3 }
         ]
       }
     ]
@@ -595,20 +658,44 @@ function getSubjectMeta(subName, cohortKey = '') {
   }
 
   const clean = cleanSubjectName(subName);
-  // Auto-categorize fallback
-  if (clean.includes('국어') || clean.includes('문학') || clean.includes('독서') || clean.includes('작문') || clean.includes('화법') || clean.includes('언어') || clean.includes('수학') || clean.includes('대수') || clean.includes('미적') || clean.includes('기하') || clean.includes('영어')) {
-    return { category: '기초', type: '선택', units: 3, group: '학생선택', badge: '선택' };
+  // Auto-categorize fallback to concrete 2022 revised curriculum categories
+  if (clean.includes('국어') || clean.includes('문학') || clean.includes('독서') || clean.includes('작문') || clean.includes('화법') || clean.includes('언어생활 탐구')) {
+    return { category: '국어', type: '선택', units: 3, group: '학생선택', badge: '선택' };
+  }
+  if (clean.includes('수학') || clean.includes('대수') || clean.includes('미적') || clean.includes('기하') || clean.includes('확률') || clean.includes('통계')) {
+    return { category: '수학', type: '선택', units: 3, group: '학생선택', badge: '선택' };
+  }
+  if (clean.includes('영어') || clean.includes('영미')) {
+    return { category: '영어', type: '선택', units: 3, group: '학생선택', badge: '선택' };
   }
   if (clean.includes('물리') || clean.includes('화학') || clean.includes('생명') || clean.includes('지구') || clean.includes('과학') || clean.includes('양자') || clean.includes('에너지')) {
     return { category: '과학', type: '선택', units: 3, group: '선택 4과목', badge: '택4' };
   }
-  if (clean.includes('사회') || clean.includes('지리') || clean.includes('역사') || clean.includes('윤리') || clean.includes('법') || clean.includes('경제') || clean.includes('세계') || clean.includes('국제')) {
+  if (clean.includes('사회') || clean.includes('지리') || clean.includes('역사') || clean.includes('윤리') || clean.includes('법') || clean.includes('경제') || clean.includes('세계') || clean.includes('국제') || clean.includes('도시') || clean.includes('정치')) {
     return { category: '사회', type: '선택', units: 3, group: '선택 4과목', badge: '택4' };
   }
-  if (clean.includes('스포츠') || clean.includes('체육') || clean.includes('음악') || clean.includes('미술')) {
-    return { category: '예체능', type: '선택', units: clean.includes('스포츠') ? 2 : 3, group: '학교지정', badge: '지정' };
+  if (clean.includes('스포츠') || clean.includes('체육')) {
+    return { category: '체육', type: '지정', units: clean.includes('스포츠') ? 2 : 1, group: '학교지정', badge: '지정' };
   }
-  return { category: '생활교양', type: '선택', units: 3, group: '선택 1과목', badge: '택1' };
+  if (clean.includes('음악')) {
+    return { category: '음악', type: '지정', units: 3, group: '학교지정', badge: '지정' };
+  }
+  if (clean.includes('미술')) {
+    return { category: '미술', type: '지정', units: 3, group: '학교지정', badge: '지정' };
+  }
+  if (clean.includes('중국어') || clean.includes('일본어') || clean.includes('중국') || clean.includes('일본') || clean.includes('외국어')) {
+    return { category: '제2외국어', type: '선택', units: 3, group: '선택 1과목', badge: '택1' };
+  }
+  if (clean.includes('정보') || clean.includes('인공지능 기초') || clean.includes('데이터 과학') || clean.includes('소프트웨어') || clean.includes('코딩') || clean.includes('프로그래밍')) {
+    return { category: '정보', type: '선택', units: 3, group: '선택 1과목', badge: '택1' };
+  }
+  if (clean.includes('한문') || clean.includes('한자')) {
+    return { category: '한문', type: '선택', units: 3, group: '선택 1과목', badge: '택1' };
+  }
+  if (clean.includes('심리') || clean.includes('교양') || clean.includes('철학') || clean.includes('환경')) {
+    return { category: '교양', type: '선택', units: 3, group: '선택 1과목', badge: '택1' };
+  }
+  return { category: '교양', type: '선택', units: 3, group: '선택 1과목', badge: '택1' };
 }
 
 // Priority for subject ordering in tables:
@@ -1193,16 +1280,24 @@ function renderBarChart(subjects) {
 
 // Render Donut Chart for Subject Categories
 function renderDonutChart(subjects) {
-  const ctx = document.getElementById('categoryDonutChart').getContext('2d');
+  const chartCanvas = document.getElementById('categoryDonutChart');
+  if (!chartCanvas) return;
+  const ctx = chartCanvas.getContext('2d');
 
-  const catMap = { '기초': 0, '사회': 0, '과학': 0, '생활교양': 0, '예체능': 0 };
+  const catMap = { '국어': 0, '수학': 0, '영어': 0, '사회': 0, '과학': 0, '체육·예술': 0, '생활·교양': 0 };
   subjects.forEach(s => {
-    const cat = s.category || '기초';
-    catMap[cat] = (catMap[cat] || 0) + s.count;
+    const cat = s.category || '국어';
+    if (cat === '국어') catMap['국어'] += s.count;
+    else if (cat === '수학') catMap['수학'] += s.count;
+    else if (cat === '영어') catMap['영어'] += s.count;
+    else if (cat === '사회') catMap['사회'] += s.count;
+    else if (cat === '과학') catMap['과학'] += s.count;
+    else if (['체육', '음악', '미술', '예체능', '체육·예술'].includes(cat)) catMap['체육·예술'] += s.count;
+    else catMap['생활·교양'] += s.count;
   });
 
-  const labels = ['기초 (국·수·영)', '탐구 (사회)', '탐구 (과학)', '생활·교양', '체육·예술'];
-  const data = [catMap['기초'], catMap['사회'], catMap['과학'], catMap['생활교양'], catMap['예체능']];
+  const labels = ['국어', '수학', '영어', '사회', '과학', '체육·예술', '생활·교양'];
+  const data = [catMap['국어'], catMap['수학'], catMap['영어'], catMap['사회'], catMap['과학'], catMap['체육·예술'], catMap['생활·교양']];
 
   if (state.charts.donut) {
     state.charts.donut.destroy();
@@ -1215,11 +1310,13 @@ function renderDonutChart(subjects) {
       datasets: [{
         data: data,
         backgroundColor: [
-          '#A78BFA', // Purple (Basic)
-          '#38BDF8', // Sky Blue (Social)
-          '#34D399', // Mint (Science)
-          '#FBBF24', // Amber (General)
-          '#FB7185'  // Coral (Arts/PE)
+          '#A78BFA', // 국어 (Soft Purple)
+          '#60A5FA', // 수학 (Soft Blue)
+          '#818CF8', // 영어 (Indigo)
+          '#FBBF24', // 사회 (Amber)
+          '#34D399', // 과학 (Mint)
+          '#F472B6', // 체육·예술 (Pink)
+          '#94A3B8'  // 생활·교양 (Slate)
         ],
         borderWidth: 3,
         borderColor: '#FFFFFF',
@@ -1232,7 +1329,7 @@ function renderDonutChart(subjects) {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: { font: { family: 'Pretendard', size: 11, weight: '500' }, padding: 12 }
+          labels: { font: { family: 'Pretendard', size: 11, weight: '500' }, padding: 10 }
         }
       },
       cutout: '68%'
@@ -1248,7 +1345,7 @@ function renderSubjectTable(subjects, totalCount) {
   tbody.innerHTML = '';
 
   let filtered = subjects.filter(sub => {
-    if (state.categoryFilter !== 'all' && sub.category !== state.categoryFilter) {
+    if (state.categoryFilter !== 'all' && !matchCategoryFilter(sub.category, state.categoryFilter)) {
       return false;
     }
     if (state.typeFilter !== 'all') {
@@ -1279,22 +1376,6 @@ function renderSubjectTable(subjects, totalCount) {
   // 1. Separate into Designated (학교 지정) and Elective (학생 선택)
   const designatedSubjects = filtered.filter(s => s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
   const electiveSubjects = filtered.filter(s => !(s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정'));
-
-  // Category priority order: 기초 -> 사회 -> 과학 -> 예체능/체육·예술 -> 생활교양
-  const categoryOrder = ['기초', '사회', '과학', '예체능', '체육·예술', '생활교양'];
-  const getCatIndex = (cat) => {
-    const idx = categoryOrder.indexOf(cat);
-    return idx === -1 ? 99 : idx;
-  };
-
-  const getCategoryBadgeClass = (category) => {
-    if (category === '기초') return 'badge-purple';
-    if (category === '사회') return 'badge-blue';
-    if (category === '과학') return 'badge-green';
-    if (category === '생활교양') return 'badge-amber';
-    if (category === '예체능' || category === '체육·예술') return 'badge-pink';
-    return 'badge-gray';
-  };
 
   // Helper function to render a single subject row
   const renderRow = (sub, rowIdx, isDesignated, rowClass = '') => {
@@ -1394,7 +1475,7 @@ function renderSubjectTable(subjects, totalCount) {
   let globalRank = 1;
 
   // -------------------------------------------------------------
-  // SECTION 1: 학교 지정 과목 (해당 학년 전원 수강)
+  // SECTION 1: 학교 지정 과목 (해당 학년 전원 수강, 교과 영역별 정렬)
   // -------------------------------------------------------------
   if (designatedSubjects.length > 0) {
     const secTr = document.createElement('tr');
@@ -1412,7 +1493,11 @@ function renderSubjectTable(subjects, totalCount) {
     `;
     tbody.appendChild(secTr);
 
-    const sortedDesignated = [...designatedSubjects].sort((a, b) => getCatIndex(a.category) - getCatIndex(b.category) || a.name.localeCompare(b.name, 'ko'));
+    const sortedDesignated = [...designatedSubjects].sort((a, b) => {
+      const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+      if (catDiff !== 0) return catDiff;
+      return a.name.localeCompare(b.name, 'ko');
+    });
     sortedDesignated.forEach(sub => {
       tbody.appendChild(renderRow(sub, globalRank++, true, 'group-row-designated'));
     });
@@ -1499,8 +1584,14 @@ function renderSubjectTable(subjects, totalCount) {
       `;
       tbody.appendChild(grpTr);
 
-      // 2. 개별 과목 렌더링
-      const sortedGroupSubs = [...subsInGroup].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ko'));
+      // 2. 개별 과목 렌더링 (교과 영역별 국어 -> 수학 -> 영어 -> 사회 -> 과학 -> 체육/예술 -> 생활교양 순 정렬)
+      const sortedGroupSubs = [...subsInGroup].sort((a, b) => {
+        const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+        if (catDiff !== 0) return catDiff;
+        const countDiff = (b.count || 0) - (a.count || 0);
+        if (countDiff !== 0) return countDiff;
+        return a.name.localeCompare(b.name, 'ko');
+      });
       sortedGroupSubs.forEach(sub => {
         tbody.appendChild(renderRow(sub, globalRank++, false, styleMeta.rowClass));
       });
@@ -2405,7 +2496,12 @@ async function downloadCohortPdfReport(cohortKey) {
         </td>
       </tr>
     `;
-    designatedSubjects.forEach(sub => {
+    const sortedDesignated = [...designatedSubjects].sort((a, b) => {
+      const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+      if (catDiff !== 0) return catDiff;
+      return a.name.localeCompare(b.name, 'ko');
+    });
+    sortedDesignated.forEach(sub => {
       tableRowsHtml += `
         <tr style="border-bottom:1px solid #e2e8f0; background:#ffffff;">
           <td style="padding:4px 5px; text-align:center; color:#64748b;">${globalRank++}</td>
@@ -2443,7 +2539,13 @@ async function downloadCohortPdfReport(cohortKey) {
       </tr>
     `;
 
-    const sortedSubs = [...subs].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'ko'));
+    const sortedSubs = [...subs].sort((a, b) => {
+      const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+      if (catDiff !== 0) return catDiff;
+      const countDiff = (b.count || 0) - (a.count || 0);
+      if (countDiff !== 0) return countDiff;
+      return a.name.localeCompare(b.name, 'ko');
+    });
     sortedSubs.forEach(sub => {
       const calcSec = Math.round(sub.count / simSize);
       const manSec = getSubjectManualSections(cohortKey, sub.name, calcSec);
@@ -2775,7 +2877,12 @@ function exportCurrentTableToExcel() {
   // 1. 학교 지정 과목
   if (designatedSubjects.length > 0) {
     exportData.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '', '']);
-    designatedSubjects.forEach(s => {
+    const sortedDesignated = [...designatedSubjects].sort((a, b) => {
+      const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+      if (catDiff !== 0) return catDiff;
+      return a.name.localeCompare(b.name, 'ko');
+    });
+    sortedDesignated.forEach(s => {
       exportData.push([
         rank++,
         s.category,
@@ -2828,7 +2935,15 @@ function exportCurrentTableToExcel() {
 
       exportData.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, `${formatClassAvg(groupCnt, groupManualSec)}명`, '', '']);
 
-      subs.forEach(s => {
+      const sortedSubs = [...subs].sort((a, b) => {
+        const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+        if (catDiff !== 0) return catDiff;
+        const countDiff = (b.count || 0) - (a.count || 0);
+        if (countDiff !== 0) return countDiff;
+        return a.name.localeCompare(b.name, 'ko');
+      });
+
+      sortedSubs.forEach(s => {
         const sections = Math.round(s.count / simSize);
         const manualSec = getSubjectManualSections(currentKey, s.name, sections);
         const hours = manualSec * (s.units || 3);
@@ -3051,9 +3166,27 @@ function renderMasterSummaryView() {
 
   const filtered = masterList.filter(item => {
     if (cohortFilter !== 'all' && item.cohortKey !== cohortFilter) return false;
-    if (catFilter !== 'all' && item.category !== catFilter) return false;
+    if (catFilter !== 'all' && !matchCategoryFilter(item.category, catFilter)) return false;
     if (query && !item.name.toLowerCase().includes(query)) return false;
     return true;
+  });
+
+  // Sort filtered list: cohort order -> designated vs elective -> category sort order -> student count desc -> name
+  filtered.sort((a, b) => {
+    const cohortOrder = cohorts.indexOf(a.cohortKey) - cohorts.indexOf(b.cohortKey);
+    if (cohortOrder !== 0) return cohortOrder;
+
+    const isDesigA = (a.type === '지정' || a.group === '학교지정' || a.badge === '학교지정') ? 0 : 1;
+    const isDesigB = (b.type === '지정' || b.group === '학교지정' || b.badge === '학교지정') ? 0 : 1;
+    if (isDesigA !== isDesigB) return isDesigA - isDesigB;
+
+    const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+    if (catDiff !== 0) return catDiff;
+
+    const countDiff = (b.count || 0) - (a.count || 0);
+    if (countDiff !== 0) return countDiff;
+
+    return a.name.localeCompare(b.name, 'ko');
   });
 
   const rowCountEl = document.getElementById('master-table-row-count');
@@ -3074,12 +3207,7 @@ function renderMasterSummaryView() {
     const manualVal = isDesignated ? '-' : getSubjectManualSections(sub.cohortKey, sub.name, sections);
     const isDiff = !isDesignated && (manualVal !== sections);
 
-    let catBadgeClass = 'badge-gray';
-    if (sub.category === '기초') catBadgeClass = 'badge-purple';
-    if (sub.category === '사회') catBadgeClass = 'badge-blue';
-    if (sub.category === '과학') catBadgeClass = 'badge-green';
-    if (sub.category === '생활교양') catBadgeClass = 'badge-amber';
-    if (sub.category === '예체능') catBadgeClass = 'badge-pink';
+    const catBadgeClass = getCategoryBadgeClass(sub.category);
 
     let groupBadgeClass = 'badge-purple';
     if (isDesignated) groupBadgeClass = 'badge-gray';
@@ -3186,7 +3314,21 @@ function exportMasterSummaryToExcel() {
     // Cohort separator header
     masterRows.push([`▶ ${cohortName}`, '', '', '', '', '', '', '', '', '', '', '', '']);
 
-    ch.subjects.forEach((s, idx) => {
+    const sortedSubjects = [...ch.subjects].sort((a, b) => {
+      const isDesigA = (a.type === '지정' || a.group === '학교지정' || a.badge === '학교지정') ? 0 : 1;
+      const isDesigB = (b.type === '지정' || b.group === '학교지정' || b.badge === '학교지정') ? 0 : 1;
+      if (isDesigA !== isDesigB) return isDesigA - isDesigB;
+
+      const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+      if (catDiff !== 0) return catDiff;
+
+      const countDiff = (b.count || 0) - (a.count || 0);
+      if (countDiff !== 0) return countDiff;
+
+      return a.name.localeCompare(b.name, 'ko');
+    });
+
+    sortedSubjects.forEach((s, idx) => {
       const isDesignated = (s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정');
       const sections = isDesignated ? '-' : Math.round(s.count / simSize);
       const manualVal = isDesignated ? '-' : getSubjectManualSections(key, s.name, sections);
@@ -3311,7 +3453,12 @@ function exportMasterSummaryToExcel() {
     // 1. 학교 지정 과목
     if (designatedSubjects.length > 0) {
       sheetRows.push(['[학교 지정 과목]', '', '', '해당 학년 필수 이수', '', '', '', '', '', '', '', '']);
-      designatedSubjects.forEach(s => {
+      const sortedDesignated = [...designatedSubjects].sort((a, b) => {
+        const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+        if (catDiff !== 0) return catDiff;
+        return a.name.localeCompare(b.name, 'ko');
+      });
+      sortedDesignated.forEach(s => {
         sheetRows.push([
           rank++,
           s.category,
@@ -3364,7 +3511,15 @@ function exportMasterSummaryToExcel() {
 
         sheetRows.push([`[${gName}]`, '', '', '학생 수요 선택군', '', '', `기준: ${(groupCnt / 25).toFixed(2)}`, `예상: ${groupCalcSec}개 반`, `확정: ${groupManualSec}개 반`, `${formatClassAvg(groupCnt, groupManualSec)}명`, '', '']);
 
-        subs.forEach(s => {
+        const sortedSubs = [...subs].sort((a, b) => {
+          const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+          if (catDiff !== 0) return catDiff;
+          const countDiff = (b.count || 0) - (a.count || 0);
+          if (countDiff !== 0) return countDiff;
+          return a.name.localeCompare(b.name, 'ko');
+        });
+
+        sortedSubs.forEach(s => {
           const sections = Math.round(s.count / simSize);
           const manualSec = getSubjectManualSections(key, s.name, sections);
           const hours = manualSec * (s.units || 3);

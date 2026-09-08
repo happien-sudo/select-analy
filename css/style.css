@@ -645,6 +645,8 @@ body {
 .badge-pink { background: var(--pastel-pink); color: var(--pastel-pink-text); }
 .badge-amber { background: var(--pastel-amber); color: var(--pastel-amber-text); }
 .badge-gray { background: #F1F5F9; color: #475569; }
+.badge-indigo { background: #EEF2FF; color: #4338CA; }
+.badge-teal { background: #CCFBF1; color: #0F766E; }
 
 /* Filter Pill Bar */
 .filter-bar {
