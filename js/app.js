@@ -2436,6 +2436,9 @@ function setupModalClosers() {
 // -------------------------------------------------------------
 async function downloadCohortPdfReport(cohortKey) {
   cohortKey = cohortKey || state.activeTab;
+  if (cohortKey === 'all' || cohortKey === 'master' || cohortKey === 'master_summary') {
+    return downloadMasterPdfReport();
+  }
   const cohort = state.data[cohortKey];
   if (!cohort || !cohort.subjects || cohort.subjects.length === 0) {
     showAlertModal('데이터 없음', '다운로드할 과목 선택 데이터가 없습니다.', 'error');
@@ -2483,58 +2486,18 @@ async function downloadCohortPdfReport(cohortKey) {
     return a.localeCompare(b, 'ko');
   });
 
-  // 2. Build Rows HTML
+  // 2. Build Rows HTML (Only Elective Subjects, 6 Columns: 순위, 과목명, 신청 학생, 학생수/25, 확정 분반, 학급당 인원)
   let tableRowsHtml = '';
   let globalRank = 1;
 
-  // Designated Section
-  if (designatedSubjects.length > 0) {
-    tableRowsHtml += `
-      <tr style="background:#f1f5f9; font-weight:800; border-top:2px solid #94a3b8; border-bottom:1px solid #cbd5e1;">
-        <td colspan="11" style="padding:5px 8px; text-align:left; color:#334155; font-size:10px;">
-          📌 <strong>학교 지정 과목</strong> (해당 학년 전체 학생 필수 이수 · 총 ${designatedSubjects.length}개 과목)
-        </td>
-      </tr>
-    `;
-    const sortedDesignated = [...designatedSubjects].sort((a, b) => {
-      const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
-      if (catDiff !== 0) return catDiff;
-      return a.name.localeCompare(b.name, 'ko');
-    });
-    sortedDesignated.forEach(sub => {
-      tableRowsHtml += `
-        <tr style="border-bottom:1px solid #e2e8f0; background:#ffffff;">
-          <td style="padding:4px 5px; text-align:center; color:#64748b;">${globalRank++}</td>
-          <td style="padding:4px 5px; text-align:center;"><span style="display:inline-block; padding:1px 5px; border-radius:3px; font-size:9.5px; background:#f1f5f9; color:#475569;">${sub.category}</span></td>
-          <td style="padding:4px 6px; font-weight:700; color:#1e293b;">${sub.name}</td>
-          <td style="padding:4px 5px; text-align:center; color:#64748b; font-size:9.5px;">학교지정</td>
-          <td style="padding:4px 5px; text-align:center; font-weight:700;">${sub.units || 3}학점</td>
-          <td style="padding:4px 6px; text-align:right; font-weight:700;">${sub.count}명</td>
-          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
-          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
-          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
-          <td style="padding:4px 5px; text-align:center; color:#94a3b8;">-</td>
-          <td style="padding:4px 6px; text-align:right; color:#64748b;">${sub.rate}%</td>
-        </tr>
-      `;
-    });
-  }
-
-  // Elective Groups
+  // Elective Groups (학교 지정 과목 및 소계 제외)
   sortedGroupNames.forEach(gName => {
     const subs = groupMap.get(gName);
-    const grpCalc = subs.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
-    const grpManual = subs.reduce((sum, s) => sum + getSubjectManualSections(cohortKey, s.name, Math.round(s.count / simSize)), 0);
-    const grpCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
-    const grpRatio = (grpCnt / 25).toFixed(2);
 
     tableRowsHtml += `
-      <tr style="background:#eef2ff; font-weight:800; border-top:2px solid #818cf8; border-bottom:1px solid #c7d2fe;">
-        <td colspan="6" style="padding:5px 8px; text-align:left; color:#312e81; font-size:10px;">
-          🎯 <strong>${gName}</strong> (${subs.length}개 개설 후보 과목 중 학생 수요 선택)
-        </td>
-        <td colspan="5" style="padding:5px 8px; text-align:right; color:#4338ca; font-size:10px;">
-          학생수/25: <strong>${grpRatio}</strong>  |  예상: <strong>${grpCalc}개반</strong>  |  확정: <strong>${grpManual}개반</strong>
+      <tr style="background:#eef2ff; font-weight:800; border-top:1.5px solid #818cf8; border-bottom:1px solid #c7d2fe;">
+        <td colspan="6" style="padding:6px 10px; text-align:left; color:#312e81; font-size:10.5px;">
+          🎯 <strong>${gName}</strong> <span style="font-weight:normal; font-size:9.5px; color:#4338ca;">(${subs.length}개 과목)</span>
         </td>
       </tr>
     `;
@@ -2546,6 +2509,7 @@ async function downloadCohortPdfReport(cohortKey) {
       if (countDiff !== 0) return countDiff;
       return a.name.localeCompare(b.name, 'ko');
     });
+
     sortedSubs.forEach(sub => {
       const calcSec = Math.round(sub.count / simSize);
       const manSec = getSubjectManualSections(cohortKey, sub.name, calcSec);
@@ -2553,53 +2517,30 @@ async function downloadCohortPdfReport(cohortKey) {
       const ratio = (sub.count / 25).toFixed(2);
 
       tableRowsHtml += `
-        <tr style="border-bottom:1px solid #e2e8f0; ${isDiff ? 'background:#faf5ff;' : 'background:#ffffff;'}">
-          <td style="padding:4px 5px; text-align:center; color:#64748b;">${globalRank++}</td>
-          <td style="padding:4px 5px; text-align:center;"><span style="display:inline-block; padding:1px 5px; border-radius:3px; font-size:9.5px; background:#e0e7ff; color:#3730a3;">${sub.category}</span></td>
-          <td style="padding:4px 6px; font-weight:700; color:#1e293b;">${sub.name}</td>
-          <td style="padding:4px 5px; text-align:center; color:#4338ca; font-size:9.5px;">${sub.group || sub.badge || '선택'}</td>
-          <td style="padding:4px 5px; text-align:center; font-weight:700;">${sub.units || 3}학점</td>
-          <td style="padding:4px 6px; text-align:right; font-weight:700;">${sub.count}명</td>
-          <td style="padding:4px 5px; text-align:center; font-weight:600; color:#475569; background:#f8fafc;">${ratio}</td>
-          <td style="padding:4px 5px; text-align:center; font-weight:700; color:#4338ca;">${calcSec}개 반</td>
-          <td style="padding:4px 5px; text-align:center; font-weight:900; ${isDiff ? 'color:#7c3aed; background:#f3e8ff;' : 'color:#1e1b4b;'}">${manSec}개 반</td>
-          <td style="padding:4px 5px; text-align:center; font-weight:700; color:#334155; background:#f8fafc;">${formatClassAvg(sub.count, manSec)}</td>
-          <td style="padding:4px 6px; text-align:right; color:#475569;">${sub.rate}%</td>
+        <tr style="border-bottom:1px solid #cbd5e1; ${isDiff ? 'background:#faf5ff;' : 'background:#ffffff;'}">
+          <td style="padding:5px 6px; text-align:center; color:#64748b; font-weight:700; border:1px solid #e2e8f0;">${globalRank++}</td>
+          <td style="padding:5px 10px; font-weight:700; color:#1e293b; border:1px solid #e2e8f0; font-size:10.5px;">${sub.name}</td>
+          <td style="padding:5px 8px; text-align:right; font-weight:800; color:#0f172a; border:1px solid #e2e8f0;">${sub.count.toLocaleString()}명</td>
+          <td style="padding:5px 6px; text-align:center; font-weight:700; color:#475569; background:#f8fafc; border:1px solid #e2e8f0;">${ratio}</td>
+          <td style="padding:5px 6px; text-align:center; font-weight:900; ${isDiff ? 'color:#7c3aed; background:#f3e8ff;' : 'color:#1e1b4b;'} border:1px solid #e2e8f0;">${manSec}개 반</td>
+          <td style="padding:5px 6px; text-align:center; font-weight:800; color:#334155; background:#f8fafc; border:1px solid #e2e8f0;">${formatClassAvg(sub.count, manSec)}</td>
         </tr>
       `;
     });
-
-    // Group Subtotal row
-    tableRowsHtml += `
-      <tr style="background:#f8fafc; font-weight:800; border-top:1px dashed #cbd5e1; border-bottom:2px solid #94a3b8;">
-        <td style="padding:4px 5px; text-align:center; color:#64748b; font-size:9.5px;">소계</td>
-        <td colspan="4" style="padding:4px 8px; color:#1e293b; font-size:10px;">
-          ∑ <strong>[${gName}] 분반 수 총계</strong> (${subs.length}개 과목 합산)
-        </td>
-        <td style="padding:4px 6px; text-align:right; font-weight:800; color:#0f172a;">${grpCnt.toLocaleString()}명</td>
-        <td style="padding:4px 5px; text-align:center; font-weight:700; color:#334155; background:#f1f5f9;">${grpRatio}</td>
-        <td style="padding:4px 5px; text-align:center; font-weight:900; color:#4338ca; background:#eef2ff;">${grpCalc}개 반</td>
-        <td style="padding:4px 5px; text-align:center; font-weight:900; color:#6d28d9; background:#ede9fe;">${grpManual}개 반</td>
-        <td style="padding:4px 5px; text-align:center; font-weight:800; color:#1e1b4b; background:#f8fafc;">${formatClassAvg(grpCnt, grpManual)}</td>
-        <td style="padding:4px 5px; text-align:center; font-size:9.5px; color:#4338ca; font-weight:600;">확정</td>
-      </tr>
-    `;
   });
 
-  // Grand Total row
+  // Grand Total row (6 Columns)
   const grandRatio = (totalStudentChoices / 25).toFixed(2);
   tableRowsHtml += `
-    <tr style="background:#ede9fe; font-weight:900; border-top:2px solid #6366f1; border-bottom:2px solid #6366f1; font-size:10.5px;">
-      <td style="padding:5px; text-align:center; color:#4c1d95;">총계</td>
-      <td colspan="4" style="padding:5px 8px; color:#312e81;">
+    <tr style="background:#ede9fe; font-weight:900; border-top:2px solid #6366f1; border-bottom:2px solid #6366f1; font-size:11px;">
+      <td style="padding:6px; text-align:center; color:#4c1d95; border:1px solid #c7d2fe;">총계</td>
+      <td style="padding:6px 10px; color:#312e81; border:1px solid #c7d2fe;">
         🎯 <strong>학생선택 과목 전체 분반 총계</strong>
       </td>
-      <td style="padding:5px 6px; text-align:right; color:#1e1b4b;">${totalStudentChoices.toLocaleString()}명</td>
-      <td style="padding:5px 5px; text-align:center; color:#312e81; background:#ddd6fe;">${grandRatio}</td>
-      <td style="padding:5px 5px; text-align:center; color:#312e81; background:#e0e7ff;">${grandCalc}개 반</td>
-      <td style="padding:5px 5px; text-align:center; color:#4c1d95; background:#ddd6fe;">${grandManual}개 반</td>
-      <td style="padding:5px 5px; text-align:center; font-weight:900; color:#4c1d95; background:#ddd6fe;">${formatClassAvg(totalStudentChoices, grandManual)}</td>
-      <td style="padding:5px 5px; text-align:center; font-size:9.5px; color:#4338ca;">최종 확정</td>
+      <td style="padding:6px 8px; text-align:right; color:#1e1b4b; font-weight:900; border:1px solid #c7d2fe;">${totalStudentChoices.toLocaleString()}명</td>
+      <td style="padding:6px 6px; text-align:center; color:#312e81; background:#ddd6fe; border:1px solid #c7d2fe;">${grandRatio}</td>
+      <td style="padding:6px 6px; text-align:center; color:#4c1d95; background:#ddd6fe; border:1px solid #c7d2fe;">${grandManual}개 반</td>
+      <td style="padding:6px 6px; text-align:center; font-weight:900; color:#4c1d95; background:#ddd6fe; border:1px solid #c7d2fe;">${formatClassAvg(totalStudentChoices, grandManual)}</td>
     </tr>
   `;
 
@@ -2650,73 +2591,46 @@ async function downloadCohortPdfReport(cohortKey) {
 
   reportWrap.innerHTML = `
     <!-- Top Header Bar with School Stamp/Signature box -->
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:2px solid #1e293b; padding-bottom:10px;">
-      <div>
-        <div style="font-size:10.5px; font-weight:700; color:#6366f1; letter-spacing:0.5px;">정명고등학교 교육과정위원회 공식 보고서</div>
-        <h1 style="font-size:17px; font-weight:900; color:#0f172a; margin:3px 0 2px 0;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:2px solid #1e293b; padding-bottom:10px;">
+      <div style="flex:1; padding-right:16px;">
+        <div style="font-size:11px; font-weight:800; color:#6366f1; letter-spacing:0.8px; margin-bottom:4px;">정명고등학교 교육과정위원회 공식 보고서</div>
+        <h1 style="font-size:19px; font-weight:900; color:#0f172a; margin:0 0 5px 0; letter-spacing:-0.5px;">
           ${cleanCohortName} 과목 선택 결과 및 분반 편성 현황표
         </h1>
-        <div style="font-size:10px; color:#64748b; margin-top:2px;">
-          분석 기준 정원: <strong>${simSize}명/반</strong>  |  총 학생 수: <strong>${studentCount}명</strong>  |  작성일: <strong>${new Date().toLocaleDateString('ko-KR')}</strong>
+        <div style="font-size:10.5px; color:#475569; line-height:1.5;">
+          분석 기준 정원: <strong>${simSize}명/반</strong> &nbsp;|&nbsp; 총 학생 수: <strong>${studentCount}명</strong> &nbsp;|&nbsp; 작성일: <strong>${new Date().toLocaleDateString('ko-KR')}</strong>
         </div>
       </div>
-      <!-- Approval Sign-off Box -->
-      <table style="border-collapse:collapse; text-align:center; font-size:9.5px; border:1px solid #cbd5e1;">
-        <tr style="background:#f8fafc; font-weight:700;">
-          <td rowspan="2" style="width:18px; border:1px solid #cbd5e1; background:#f1f5f9; padding:2px;">결<br>재</td>
-          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">담 당</td>
-          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">부 장</td>
-          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">교 감</td>
-          <td style="width:44px; border:1px solid #cbd5e1; padding:2px 3px;">교 장</td>
-        </tr>
-        <tr style="height:32px;">
-          <td style="border:1px solid #cbd5e1;"></td>
-          <td style="border:1px solid #cbd5e1;"></td>
-          <td style="border:1px solid #cbd5e1;"></td>
-          <td style="border:1px solid #cbd5e1;"></td>
-        </tr>
-      </table>
-    </div>
-
-    <!-- Summary KPI Strip -->
-    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-bottom:10px;">
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:5px; padding:5px 6px; text-align:center;">
-        <div style="font-size:9.5px; color:#64748b; font-weight:600;">총 개설 과목</div>
-        <div style="font-size:13px; font-weight:800; color:#1e293b; margin-top:1px;">${cohort.subjects.length}개 과목</div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:5px; padding:5px 6px; text-align:center;">
-        <div style="font-size:9.5px; color:#64748b; font-weight:600;">학교 지정 과목</div>
-        <div style="font-size:13px; font-weight:800; color:#475569; margin-top:1px;">${designatedSubjects.length}개</div>
-      </div>
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:5px; padding:5px 6px; text-align:center;">
-        <div style="font-size:9.5px; color:#64748b; font-weight:600;">학생 선택 과목</div>
-        <div style="font-size:13px; font-weight:800; color:#4338ca; margin-top:1px;">${electiveSubjects.length}개</div>
-      </div>
-      <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:5px; padding:5px 6px; text-align:center;">
-        <div style="font-size:9.5px; color:#4338ca; font-weight:700;">예상 분반 총계</div>
-        <div style="font-size:14px; font-weight:900; color:#312e81; margin-top:1px;">${grandCalc}개 반</div>
-      </div>
-      <div style="background:#ede9fe; border:1.5px solid #a78bfa; border-radius:5px; padding:5px 6px; text-align:center;">
-        <div style="font-size:9.5px; color:#6d28d9; font-weight:700;">확정 분반 총계</div>
-        <div style="font-size:14px; font-weight:900; color:#4c1d95; margin-top:1px;">${grandManual}개 반</div>
+      <!-- Enlarged Approval Sign-off Box -->
+      <div>
+        <table style="border-collapse:collapse; text-align:center; font-size:11px; font-weight:700; border:1.5px solid #334155;">
+          <tr style="background:#f1f5f9; color:#1e293b;">
+            <td rowspan="2" style="width:28px; border:1.5px solid #334155; background:#e2e8f0; font-size:11.5px; font-weight:900; padding:4px 2px; letter-spacing:1px; line-height:1.4;">결<br>재</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">담 당</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">부 장</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">교 감</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">교 장</td>
+          </tr>
+          <tr style="height:48px;">
+            <td style="border:1.5px solid #334155;"></td>
+            <td style="border:1.5px solid #334155;"></td>
+            <td style="border:1.5px solid #334155;"></td>
+            <td style="border:1.5px solid #334155;"></td>
+          </tr>
+        </table>
       </div>
     </div>
 
-    <!-- Main Data Table -->
-    <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #cbd5e1; margin-bottom:10px;">
+    <!-- Main Data Table (6 Columns: 순위, 과목명, 신청 학생, 학생수/25, 확정 분반, 학급당 인원) -->
+    <table style="width:100%; border-collapse:collapse; font-size:10px; border:1.5px solid #475569; margin-bottom:10px;">
       <thead>
         <tr style="background:#1e293b; color:#ffffff; font-weight:800; text-align:center;">
-          <th style="padding:5px 4px; width:28px;">순위</th>
-          <th style="padding:5px 4px; width:55px;">교과 영역</th>
-          <th style="padding:5px 6px; text-align:left;">과목명</th>
-          <th style="padding:5px 4px; width:65px;">지정/선택</th>
-          <th style="padding:5px 4px; width:40px;">학점</th>
-          <th style="padding:5px 5px; width:52px; text-align:right;">신청 학생</th>
-          <th style="padding:5px 4px; width:52px; background:#334155;">학생수/25</th>
-          <th style="padding:5px 4px; width:58px;">예상 분반</th>
-          <th style="padding:5px 4px; width:58px; background:#4338ca;">확정 분반</th>
-          <th style="padding:5px 4px; width:58px; background:#3730a3;">학급당 인원</th>
-          <th style="padding:5px 4px; width:48px; text-align:right;">선택률</th>
+          <th style="padding:6px 4px; width:45px; border:1px solid #475569;">순위</th>
+          <th style="padding:6px 8px; text-align:left; border:1px solid #475569;">과목명</th>
+          <th style="padding:6px 6px; width:95px; text-align:right; border:1px solid #475569;">신청 학생</th>
+          <th style="padding:6px 6px; width:95px; background:#334155; border:1px solid #475569;">학생수/25</th>
+          <th style="padding:6px 6px; width:100px; background:#4338ca; border:1px solid #475569;">확정 분반</th>
+          <th style="padding:6px 6px; width:100px; background:#3730a3; border:1px solid #475569;">학급당 인원</th>
         </tr>
       </thead>
       <tbody>
@@ -2837,6 +2751,338 @@ async function downloadCohortPdfReport(cohortKey) {
     window.print();
   } finally {
     // Cleanup DOM elements and restore scroll
+    if (reportWrap && reportWrap.parentNode) {
+      reportWrap.parentNode.removeChild(reportWrap);
+    }
+    if (loadingIndicator && loadingIndicator.parentNode) {
+      loadingIndicator.parentNode.removeChild(loadingIndicator);
+    }
+    window.scrollTo(originalScrollX, originalScrollY);
+  }
+}
+
+// -------------------------------------------------------------
+// Master Integrated A4 Portrait PDF Export (전 학기 통합 고화질 PDF 보고서)
+// -------------------------------------------------------------
+async function downloadMasterPdfReport() {
+  const cohorts = ['2026_2_1', '2026_2_2', '2025_3_1', '2025_3_2'];
+  const simSize = state.simClassSize || 25;
+
+  let allTotalStudents = 0;
+  let allTotalSubjects = 0;
+  cohorts.forEach(k => {
+    allTotalStudents += (state.data[k]?.students?.length || 0);
+    allTotalSubjects += (state.data[k]?.subjects?.length || 0);
+  });
+
+  if (allTotalSubjects === 0) {
+    showAlertModal('데이터 없음', '다운로드할 전 학기 통합 과목 데이터가 없습니다.', 'error');
+    return;
+  }
+
+  // 1. Build Integrated Table Rows HTML (Only Elective Subjects, 6 Columns)
+  let grandAllCalc = 0;
+  let grandAllManual = 0;
+  let grandAllChoices = 0;
+  let tableRowsHtml = '';
+
+  cohorts.forEach(key => {
+    const ch = state.data[key];
+    if (!ch || !ch.subjects || ch.subjects.length === 0) return;
+    const cohortName = ch.name || key;
+    const cohortStudentCount = ch.students?.length || 0;
+
+    // 학교 지정 과목 제외: 학생 선택 과목만 추출
+    const elective = ch.subjects.filter(s => !(s.type === '지정' || s.group === '학교지정' || s.badge === '학교지정'));
+    if (elective.length === 0) return;
+
+    let cohortCalc = 0;
+    let cohortManual = 0;
+    let cohortChoices = 0;
+
+    // Cohort Header Row (6 Columns)
+    tableRowsHtml += `
+      <tr style="background:#312e81; color:#ffffff; font-weight:800; border-top:2px solid #1e1b4b;">
+        <td colspan="6" style="padding:6px 10px; text-align:left; font-size:11px; color:#ffffff;">
+          ▶ <strong>${cohortName}</strong> (${cohortStudentCount}명)
+        </td>
+      </tr>
+    `;
+
+    let rank = 1;
+    const currentCohortDef = CURRICULUM_DEFINITION[key];
+    const orderedGroupNames = currentCohortDef?.groups?.map(g => g.name) || [];
+
+    const groupMap = new Map();
+    elective.forEach(sub => {
+      const gName = sub.group || '학생선택 과목';
+      if (!groupMap.has(gName)) groupMap.set(gName, []);
+      groupMap.get(gName).push(sub);
+    });
+
+    const sortedGroupNames = Array.from(groupMap.keys()).sort((a, b) => {
+      const idxA = orderedGroupNames.indexOf(a);
+      const idxB = orderedGroupNames.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b, 'ko');
+    });
+
+    sortedGroupNames.forEach(gName => {
+      const subs = groupMap.get(gName);
+      const grpCalc = subs.reduce((sum, s) => sum + Math.round(s.count / simSize), 0);
+      const grpManual = subs.reduce((sum, s) => sum + getSubjectManualSections(key, s.name, Math.round(s.count / simSize)), 0);
+      const grpCnt = subs.reduce((sum, s) => sum + (s.count || 0), 0);
+
+      cohortCalc += grpCalc;
+      cohortManual += grpManual;
+      cohortChoices += grpCnt;
+
+      // Elective Group Header Row (6 Columns)
+      tableRowsHtml += `
+        <tr style="background:#eef2ff; font-weight:800; border-top:1.5px solid #818cf8; border-bottom:1px solid #c7d2fe;">
+          <td colspan="6" style="padding:5px 10px; text-align:left; color:#312e81; font-size:10px;">
+            🎯 <strong>${gName}</strong> <span style="font-weight:normal; font-size:9px; color:#4338ca;">(${subs.length}개 과목)</span>
+          </td>
+        </tr>
+      `;
+
+      const sortedSubs = [...subs].sort((a, b) => {
+        const catDiff = getCategorySortIndex(a.category) - getCategorySortIndex(b.category);
+        if (catDiff !== 0) return catDiff;
+        const countDiff = (b.count || 0) - (a.count || 0);
+        if (countDiff !== 0) return countDiff;
+        return a.name.localeCompare(b.name, 'ko');
+      });
+
+      // 6 Columns: 순위, 과목명, 신청 학생, 학생수/25, 확정 분반, 학급당 인원
+      sortedSubs.forEach(sub => {
+        const calcSec = Math.round(sub.count / simSize);
+        const manSec = getSubjectManualSections(key, sub.name, calcSec);
+        const isDiff = (manSec !== calcSec);
+        const ratio = (sub.count / 25).toFixed(2);
+
+        tableRowsHtml += `
+          <tr style="border-bottom:1px solid #cbd5e1; ${isDiff ? 'background:#faf5ff;' : 'background:#ffffff;'}">
+            <td style="padding:4px 6px; text-align:center; color:#64748b; font-weight:700; border:1px solid #e2e8f0;">${rank++}</td>
+            <td style="padding:4px 10px; font-weight:700; color:#1e293b; border:1px solid #e2e8f0; font-size:10px;">${sub.name}</td>
+            <td style="padding:4px 8px; text-align:right; font-weight:800; color:#0f172a; border:1px solid #e2e8f0;">${sub.count.toLocaleString()}명</td>
+            <td style="padding:4px 6px; text-align:center; font-weight:700; color:#475569; background:#f8fafc; border:1px solid #e2e8f0;">${ratio}</td>
+            <td style="padding:4px 6px; text-align:center; font-weight:900; ${isDiff ? 'color:#7c3aed; background:#f3e8ff;' : 'color:#1e1b4b;'} border:1px solid #e2e8f0;">${manSec}개 반</td>
+            <td style="padding:4px 6px; text-align:center; font-weight:800; color:#334155; background:#f8fafc; border:1px solid #e2e8f0;">${formatClassAvg(sub.count, manSec)}</td>
+          </tr>
+        `;
+      });
+    });
+
+    // 소계 행은 요구사항에 따라 제외됨
+    grandAllCalc += cohortCalc;
+    grandAllManual += cohortManual;
+    grandAllChoices += cohortChoices;
+  });
+
+  // Master Grand Total Row (6 Columns)
+  tableRowsHtml += `
+    <tr style="background:#312e81; color:#ffffff; font-weight:900; border-top:2.5px solid #1e1b4b; border-bottom:2.5px solid #1e1b4b; font-size:10.5px;">
+      <td style="padding:6px; text-align:center; color:#fde047; border:1px solid #4338ca;">총계</td>
+      <td style="padding:6px 10px; color:#ffffff; border:1px solid #4338ca;">
+        ★ <strong>전 학기 통합 학생선택 분반 총계</strong> (정명고 4개 학기 합산)
+      </td>
+      <td style="padding:6px 8px; text-align:right; color:#ffffff; font-weight:900; border:1px solid #4338ca;">${grandAllChoices.toLocaleString()}명</td>
+      <td style="padding:6px 6px; text-align:center; color:#fde047; background:#3730a3; border:1px solid #4338ca;">${(grandAllChoices / 25).toFixed(2)}</td>
+      <td style="padding:6px 6px; text-align:center; color:#fde047; background:#4c1d95; border:1px solid #4338ca;">${grandAllManual}개 반</td>
+      <td style="padding:6px 6px; text-align:center; color:#ffffff; background:#3730a3; border:1px solid #4338ca;">${formatClassAvg(grandAllChoices, grandAllManual)}</td>
+    </tr>
+  `;
+
+  // 2. Floating notification
+  const loadingIndicator = document.createElement('div');
+  loadingIndicator.id = 'pdf-loading-indicator';
+  loadingIndicator.style.cssText = `
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1E1B4B;
+    color: #ffffff;
+    padding: 12px 26px;
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    z-index: 1000000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: Pretendard, -apple-system, sans-serif;
+  `;
+  loadingIndicator.innerHTML = `
+    <span style="display:inline-block; width:16px; height:16px; border:2.5px solid #C7D2FE; border-top-color:#818CF8; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+    <span>📄 [전 학년·학기 통합] 고화질 A4 PDF 보고서 생성 중...</span>
+  `;
+  document.body.appendChild(loadingIndicator);
+
+  // 3. Staging Wrapper
+  const reportWrap = document.createElement('div');
+  reportWrap.id = 'temp-pdf-master-wrapper';
+  reportWrap.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 750px;
+    background: #ffffff;
+    color: #1e293b;
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+    font-size: 10px;
+    line-height: 1.32;
+    padding: 20px 24px;
+    box-sizing: border-box;
+    z-index: 999999;
+  `;
+
+  reportWrap.innerHTML = `
+    <!-- Top Header Bar with Enlarged Approval Sign-off Box -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:2px solid #1e293b; padding-bottom:10px;">
+      <div style="flex:1; padding-right:16px;">
+        <div style="font-size:11px; font-weight:800; color:#6366f1; letter-spacing:0.8px; margin-bottom:4px;">정명고등학교 교육과정위원회 공식 종합 보고서</div>
+        <h1 style="font-size:19px; font-weight:900; color:#0f172a; margin:0 0 5px 0; letter-spacing:-0.5px;">
+          2027학년도 전 학년·학기 과목 선택 및 분반 편성 종합 현황표
+        </h1>
+        <div style="font-size:10.5px; color:#475569; line-height:1.5;">
+          분석 기준 정원: <strong>${simSize}명/반</strong> &nbsp;|&nbsp; 전체 분석 학생: <strong>${allTotalStudents}명(연인원)</strong> &nbsp;|&nbsp; 작성일: <strong>${new Date().toLocaleDateString('ko-KR')}</strong>
+        </div>
+      </div>
+      <!-- Enlarged Approval Sign-off Box -->
+      <div>
+        <table style="border-collapse:collapse; text-align:center; font-size:11px; font-weight:700; border:1.5px solid #334155;">
+          <tr style="background:#f1f5f9; color:#1e293b;">
+            <td rowspan="2" style="width:28px; border:1.5px solid #334155; background:#e2e8f0; font-size:11.5px; font-weight:900; padding:4px 2px; letter-spacing:1px; line-height:1.4;">결<br>재</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">담 당</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">부 장</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">교 감</td>
+            <td style="width:58px; border:1.5px solid #334155; padding:5px 4px;">교 장</td>
+          </tr>
+          <tr style="height:48px;">
+            <td style="border:1.5px solid #334155;"></td>
+            <td style="border:1.5px solid #334155;"></td>
+            <td style="border:1.5px solid #334155;"></td>
+            <td style="border:1.5px solid #334155;"></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Main Data Table (6 Columns: 순위, 과목명, 신청 학생, 학생수/25, 확정 분반, 학급당 인원) -->
+    <table style="width:100%; border-collapse:collapse; font-size:10px; border:1.5px solid #475569; margin-bottom:10px;">
+      <thead>
+        <tr style="background:#1e293b; color:#ffffff; font-weight:800; text-align:center;">
+          <th style="padding:6px 4px; width:45px; border:1px solid #475569;">순위</th>
+          <th style="padding:6px 8px; text-align:left; border:1px solid #475569;">과목명</th>
+          <th style="padding:6px 6px; width:95px; text-align:right; border:1px solid #475569;">신청 학생</th>
+          <th style="padding:6px 6px; width:95px; background:#334155; border:1px solid #475569;">학생수/25</th>
+          <th style="padding:6px 6px; width:100px; background:#4338ca; border:1px solid #475569;">확정 분반</th>
+          <th style="padding:6px 6px; width:100px; background:#3730a3; border:1px solid #475569;">학급당 인원</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRowsHtml}
+      </tbody>
+    </table>
+
+    <!-- Bottom Footer Note -->
+    <div style="display:flex; justify-content:space-between; align-items:center; font-size:9px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:6px;">
+      <span>※ 본 보고서는 정명고등학교 2022 개정 교육과정 수강신청 결과 분석 도구에서 자동 산출 및 편성된 공문서용 통합 보고서입니다.</span>
+      <span style="font-weight:700;">정명고등학교 교육과정부</span>
+    </div>
+  `;
+
+  document.body.appendChild(reportWrap);
+
+  const originalScrollX = window.scrollX || window.pageXOffset || 0;
+  const originalScrollY = window.scrollY || window.pageYOffset || 0;
+  window.scrollTo(0, 0);
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const pdfFilename = `정명고등학교_2027학년도_과목선택_통합종합보고서.pdf`;
+
+    if (window.html2canvas && (window.jspdf || window.jsPDF)) {
+      const canvas = await window.html2canvas(reportWrap, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        scrollX: 0,
+        scrollY: 0
+      });
+
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error('Canvas capture returned empty dimensions');
+      }
+
+      const jsPdfClass = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+      const pdf = new jsPdfClass('p', 'mm', 'a4');
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const margin = 8;
+      const contentWidth = pdfWidth - (margin * 2); // 194 mm
+      const pageHeightMm = pdfHeight - (margin * 2); // 281 mm
+
+      const totalHeightMm = (canvas.height * contentWidth) / canvas.width;
+
+      if (totalHeightMm <= pageHeightMm) {
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, totalHeightMm);
+      } else {
+        const canvasPageHeight = Math.floor((pageHeightMm * canvas.width) / contentWidth);
+        let currentY = 0;
+        let pageNum = 0;
+
+        while (currentY < canvas.height) {
+          if (pageNum > 0) {
+            pdf.addPage();
+          }
+          const sliceHeight = Math.min(canvasPageHeight, canvas.height - currentY);
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sliceHeight;
+          const ctx = pageCanvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(canvas, 0, currentY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+
+          const sliceImg = pageCanvas.toDataURL('image/jpeg', 0.98);
+          const sliceMm = (sliceHeight * contentWidth) / canvas.width;
+          pdf.addImage(sliceImg, 'JPEG', margin, margin, contentWidth, sliceMm);
+
+          currentY += sliceHeight;
+          pageNum++;
+        }
+      }
+
+      pdf.save(pdfFilename);
+      showAlertModal('PDF 다운로드 완료', '정명고등학교 전 학년·학기 통합 종합 보고서 A4 세로 규격 PDF 파일이 정상적으로 다운로드되었습니다.', 'success');
+    } else if (window.html2pdf) {
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: pdfFilename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollX: 0, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      };
+      await window.html2pdf().set(opt).from(reportWrap).save();
+      showAlertModal('PDF 다운로드 완료', '정명고등학교 전 학년·학기 통합 종합 보고서 A4 세로 규격 PDF 파일이 정상적으로 다운로드되었습니다.', 'success');
+    } else {
+      showAlertModal('다운로드 안내', 'PDF 라이브러리 준비 중입니다. 인쇄 창에서 대상 프린터를 [PDF로 저장]으로 선택해주세요.', 'info');
+      window.print();
+    }
+  } catch (err) {
+    console.error('Master PDF generation error, falling back to window.print():', err);
+    showAlertModal('다운로드 안내', '고화질 PDF 생성 처리 중 브라우저 인쇄 모드로 안전하게 전환합니다. 대상 프린터를 [PDF로 저장]으로 선택하시면 동일하게 다운로드됩니다.', 'info');
+    window.print();
+  } finally {
     if (reportWrap && reportWrap.parentNode) {
       reportWrap.parentNode.removeChild(reportWrap);
     }
@@ -3171,6 +3417,16 @@ function renderMasterSummaryView() {
     return true;
   });
 
+  // Update Active Cohort Quick PDF Button Text
+  const cohortPdfTextEl = document.getElementById('btn-master-active-cohort-pdf-text');
+  if (cohortPdfTextEl) {
+    if (cohortFilter === '2026_2_1') cohortPdfTextEl.textContent = '2학년 1학기 PDF 다운로드';
+    else if (cohortFilter === '2026_2_2') cohortPdfTextEl.textContent = '2학년 2학기 PDF 다운로드';
+    else if (cohortFilter === '2025_3_1') cohortPdfTextEl.textContent = '3학년 1학기 PDF 다운로드';
+    else if (cohortFilter === '2025_3_2') cohortPdfTextEl.textContent = '3학년 2학기 PDF 다운로드';
+    else cohortPdfTextEl.textContent = '전체 학기 PDF 다운로드';
+  }
+
   // Sort filtered list: cohort order -> designated vs elective -> category sort order -> student count desc -> name
   filtered.sort((a, b) => {
     const cohortOrder = cohorts.indexOf(a.cohortKey) - cohorts.indexOf(b.cohortKey);
@@ -3268,6 +3524,10 @@ function renderMasterSummaryView() {
       openSubjectStudentsModal(subName, cohortKey);
     });
   });
+
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
 }
 
 // -------------------------------------------------------------
@@ -4297,6 +4557,16 @@ function setupEventListeners() {
       document.querySelectorAll('#master-cohort-filter-pills button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.masterCohortFilter = btn.getAttribute('data-filter');
+
+      const cohortPdfTextEl = document.getElementById('btn-master-active-cohort-pdf-text');
+      if (cohortPdfTextEl) {
+        if (state.masterCohortFilter === '2026_2_1') cohortPdfTextEl.textContent = '2학년 1학기 PDF 다운로드';
+        else if (state.masterCohortFilter === '2026_2_2') cohortPdfTextEl.textContent = '2학년 2학기 PDF 다운로드';
+        else if (state.masterCohortFilter === '2025_3_1') cohortPdfTextEl.textContent = '3학년 1학기 PDF 다운로드';
+        else if (state.masterCohortFilter === '2025_3_2') cohortPdfTextEl.textContent = '3학년 2학기 PDF 다운로드';
+        else cohortPdfTextEl.textContent = '전체 학기 PDF 다운로드';
+      }
+
       renderMasterSummaryView();
     });
   });
@@ -4401,12 +4671,55 @@ function setupEventListeners() {
   document.getElementById('btn-export-sci4-excel')?.addEventListener('click', export4ScienceListToExcel);
   document.getElementById('btn-export-matrix')?.addEventListener('click', exportCoSelectionMatrixToExcel);
   document.getElementById('btn-export-master-excel')?.addEventListener('click', exportMasterSummaryToExcel);
+  document.getElementById('btn-export-master-pdf')?.addEventListener('click', () => {
+    downloadMasterPdfReport();
+  });
   document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
     downloadCohortPdfReport(state.activeTab);
   });
   document.getElementById('btn-export-current-excel')?.addEventListener('click', () => {
     exportCurrentTableToExcel();
   });
+
+  // Master Table PDF Dropdown Menu toggle
+  const masterPdfDropdownBtn = document.getElementById('btn-master-pdf-dropdown');
+  const masterPdfDropdownMenu = document.getElementById('master-pdf-dropdown-menu');
+  if (masterPdfDropdownBtn && masterPdfDropdownMenu) {
+    masterPdfDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      masterPdfDropdownMenu.classList.toggle('is-open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!masterPdfDropdownBtn.contains(e.target) && !masterPdfDropdownMenu.contains(e.target)) {
+        masterPdfDropdownMenu.classList.remove('is-open');
+      }
+    });
+  }
+
+  // Master Table PDF Dropdown Items click (전체 학기, 2-1, 2-2, 3-1, 3-2)
+  document.querySelectorAll('.dropdown-pdf-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      masterPdfDropdownMenu?.classList.remove('is-open');
+      const cohort = item.getAttribute('data-pdf-cohort');
+      if (cohort === 'all') {
+        downloadMasterPdfReport();
+      } else {
+        downloadCohortPdfReport(cohort);
+      }
+    });
+  });
+
+  // Master Table Active Cohort Quick PDF Button
+  document.getElementById('btn-master-active-cohort-pdf')?.addEventListener('click', () => {
+    const activeCohort = state.masterCohortFilter || 'all';
+    if (activeCohort === 'all') {
+      downloadMasterPdfReport();
+    } else {
+      downloadCohortPdfReport(activeCohort);
+    }
+  });
+
   document.getElementById('btn-reset-manual-sections')?.addEventListener('click', () => {
     resetCohortManualSections(state.activeTab);
     const cohort = state.data[state.activeTab];

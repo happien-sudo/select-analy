@@ -365,10 +365,16 @@
               2026 입학생(2학년 1·2학기) 및 2025 입학생(3학년 1·2학기)의 모든 과목별 선택 인원, 예상 분반 수, 교과 시수를 통합 집계하여 조회합니다.
             </p>
           </div>
-          <button class="btn btn-pastel-green" id="btn-export-master-excel" style="padding:8px 18px; font-weight:700; font-size:0.88rem;">
-            <i data-lucide="download" style="width:16px; height:16px;"></i>
-            통합 분석 전체 엑셀 다운로드 (.xlsx)
-          </button>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-pastel-purple" id="btn-export-master-pdf" title="전체 4개 학기 통합 A4 세로 규격 공식 보고서 PDF 다운로드" style="padding:8px 18px; font-weight:700; font-size:0.88rem; background:#EDE9FE; color:#5B21B6; border:1px solid #C4B5FD;">
+              <i data-lucide="file-text" style="width:16px; height:16px;"></i>
+              통합 분석 전체 PDF 다운로드 (A4 세로)
+            </button>
+            <button class="btn btn-pastel-green" id="btn-export-master-excel" style="padding:8px 18px; font-weight:700; font-size:0.88rem;">
+              <i data-lucide="download" style="width:16px; height:16px;"></i>
+              통합 분석 전체 엑셀 다운로드 (.xlsx)
+            </button>
+          </div>
         </div>
       </section>
 
@@ -421,7 +427,7 @@
 
       <!-- Master Integrated Subject Table -->
       <section class="dashboard-card">
-        <div class="card-header-row">
+        <div class="card-header-row" style="flex-wrap:wrap; gap:12px;">
           <div>
             <h2 class="card-title">
               <i data-lucide="table" style="width:20px; height:20px; color:#10B981;"></i>
@@ -431,19 +437,61 @@
               학교 지정과목은 예상 분반 수를 산출하지 않으며('-'), 학생 선택과목은 기준 정원(25명)으로 나눈 후 반올림하여 분반을 계산합니다.
             </p>
           </div>
-          <div class="pill-group">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <span class="badge badge-purple" id="master-table-row-count">총 0개 과목</span>
+
+            <!-- PDF Download Dropdown Menu for all & cohorts -->
+            <div class="dropdown-pdf-wrap">
+              <button class="btn btn-pastel-purple btn-sm" id="btn-master-pdf-dropdown" title="학기별 / 전체 통합 A4 세로 PDF 다운로드" style="padding:7px 14px; font-weight:700; font-size:0.83rem; background:#EDE9FE; color:#5B21B6; border:1px solid #C4B5FD; display:inline-flex; align-items:center; gap:6px;">
+                <i data-lucide="file-text" style="width:14px; height:14px;"></i>
+                <span>PDF 다운로드 (A4 세로)</span>
+                <i data-lucide="chevron-down" style="width:13px; height:13px;"></i>
+              </button>
+              <div class="dropdown-pdf-menu" id="master-pdf-dropdown-menu">
+                <div style="padding:6px 14px; font-size:0.75rem; font-weight:800; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; background:#F8FAFC; border-bottom:1px solid #F1F5F9;">
+                  A4 세로 규격 공식 보고서 PDF
+                </div>
+                <button type="button" class="dropdown-pdf-item" data-pdf-cohort="all">
+                  <i data-lucide="layers" style="width:15px; height:15px; color:#6366F1;"></i>
+                  <span>전체 학기 통합 PDF</span>
+                  <span class="badge badge-purple" style="margin-left:auto; font-size:0.68rem; padding:2px 6px;">전 학기</span>
+                </button>
+                <div style="height:1px; background:#F1F5F9; margin:3px 0;"></div>
+                <button type="button" class="dropdown-pdf-item" data-pdf-cohort="2026_2_1">
+                  <i data-lucide="calendar" style="width:14px; height:14px; color:#8B5CF6;"></i>
+                  <span>2026 입학생 (2학년 1학기) PDF</span>
+                </button>
+                <button type="button" class="dropdown-pdf-item" data-pdf-cohort="2026_2_2">
+                  <i data-lucide="calendar" style="width:14px; height:14px; color:#3B82F6;"></i>
+                  <span>2026 입학생 (2학년 2학기) PDF</span>
+                </button>
+                <button type="button" class="dropdown-pdf-item" data-pdf-cohort="2025_3_1">
+                  <i data-lucide="award" style="width:14px; height:14px; color:#10B981;"></i>
+                  <span>2025 입학생 (3학년 1학기) PDF</span>
+                </button>
+                <button type="button" class="dropdown-pdf-item" data-pdf-cohort="2025_3_2">
+                  <i data-lucide="award" style="width:14px; height:14px; color:#F59E0B;"></i>
+                  <span>2025 입학생 (3학년 2학기) PDF</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Master Filter Bar -->
         <div class="filter-bar">
-          <div class="pill-group" id="master-cohort-filter-pills">
-            <button class="pill-btn active" data-filter="all">전체 학기</button>
-            <button class="pill-btn" data-filter="2026_2_1">2학년 1학기</button>
-            <button class="pill-btn" data-filter="2026_2_2">2학년 2학기</button>
-            <button class="pill-btn" data-filter="2025_3_1">3학년 1학기</button>
-            <button class="pill-btn" data-filter="2025_3_2">3학년 2학기</button>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div class="pill-group" id="master-cohort-filter-pills">
+              <button class="pill-btn active" data-filter="all">전체 학기</button>
+              <button class="pill-btn" data-filter="2026_2_1">2학년 1학기</button>
+              <button class="pill-btn" data-filter="2026_2_2">2학년 2학기</button>
+              <button class="pill-btn" data-filter="2025_3_1">3학년 1학기</button>
+              <button class="pill-btn" data-filter="2025_3_2">3학년 2학기</button>
+            </div>
+            <button class="btn btn-pastel-purple btn-sm" id="btn-master-active-cohort-pdf" title="현재 선택된 학기 PDF 즉시 다운로드" style="padding:6px 12px; font-weight:700; font-size:0.8rem; background:#EDE9FE; color:#5B21B6; border:1px solid #C4B5FD; display:inline-flex; align-items:center; gap:5px;">
+              <i data-lucide="file-text" style="width:13px; height:13px;"></i>
+              <span id="btn-master-active-cohort-pdf-text">전체 학기 PDF 다운로드</span>
+            </button>
           </div>
 
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
