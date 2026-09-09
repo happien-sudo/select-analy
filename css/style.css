@@ -205,6 +205,15 @@ body {
   background: #FECDD3;
 }
 
+.btn-pastel-blue {
+  background: var(--pastel-blue);
+  color: var(--pastel-blue-text);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.btn-pastel-blue:hover {
+  background: #BAE6FD;
+}
+
 .btn-outline {
   background: white;
   color: var(--text-secondary);
@@ -503,6 +512,39 @@ body {
   margin-top: 8px;
 }
 
+/* Social Studies Focus Card (2026 2-1) */
+.social-middle-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-left: 4px solid #93C5FD;
+}
+
+.social-middle-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.social-stat-row {
+  cursor: pointer;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+}
+
+.social-stat-row:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+}
+
 /* Charts & Section Grid */
 .charts-grid {
   display: grid;
@@ -527,7 +569,7 @@ body {
   .charts-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .sci4-middle-card {
+  .sci4-middle-card, .social-middle-card {
     grid-column: span 2;
   }
 }
@@ -536,7 +578,7 @@ body {
   .charts-grid, .charts-grid.hide-sci4 {
     grid-template-columns: 1fr;
   }
-  .sci4-middle-card {
+  .sci4-middle-card, .social-middle-card {
     grid-column: span 1;
   }
 }

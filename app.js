@@ -751,10 +751,14 @@ function generateRealisticSampleData() {
       // Bio/Medical / Convergence Track
       choices1 = ['생명과학', '화학', '지구과학', '사회와 문화', select1_2026_1[(i + 1) % 4]];
       choices2 = ['화학 반응의 세계', '세포와 물질대사', '사회문제 탐구', '윤리와 사상', '과학과제연구', '중국 문화'];
-    } else if (i <= 170) {
+    } else if (i <= 150) {
       // Humanities / Social Science Track (4 socials + 1 from 택1)
       choices1 = ['사회와 문화', '현대사회와 윤리', '세계사', '세계시민과 지리', select1_2026_1[(i + 2) % 4]];
       choices2 = ['언어생활 탐구', '법과 사회', '윤리와 사상', '동아시아 역사 기행', '한국지리 탐구', '일본어 회화'];
+    } else if (i <= 170) {
+      // Humanities / Convergence Track (3 socials + 1 science + 1 from 택1)
+      choices1 = ['사회와 문화', '현대사회와 윤리', '세계시민과 지리', '생명과학', select1_2026_1[(i + 2) % 4]];
+      choices2 = ['언어생활 탐구', '법과 사회', '윤리와 사상', '지구시스템과학', '한국지리 탐구', '일본어 회화'];
     } else {
       // Mixed / Errors introduced for audit verification
       if (i === 179) {
@@ -1095,6 +1099,97 @@ function get4ScienceStudents(cohortKey = '2026_2_1') {
 }
 
 // -------------------------------------------------------------
+// Social Studies Choice Analysis (2026 2-1)
+// 2026 입학생 2학년 1학기: 사회 교과 4개, 3개, 2개 선택자 집계
+// -------------------------------------------------------------
+function getSocialStudiesChoiceInfo(cohortKey = '2026_2_1') {
+  const targetCohort = state.data[cohortKey];
+  const allStudents = targetCohort?.students || [];
+  const subjects = targetCohort?.subjects || [];
+
+  // 1. Identify all social studies elective subjects for this cohort
+  const socialSubjectKeys = new Set();
+  const socialSubjectNames = new Set();
+
+  // From loaded subjects where category is '사회' and type is '선택'
+  subjects.forEach(s => {
+    if (s.category === '사회' && s.type === '선택') {
+      socialSubjectKeys.add(normalizeSubjectKey(s.name));
+      socialSubjectNames.add(s.name);
+    }
+  });
+
+  // From curriculum definition
+  const def = CURRICULUM_DEFINITION[cohortKey];
+  if (def) {
+    def.groups?.forEach(g => {
+      g.subjects?.forEach(s => {
+        if (s.category === '사회') {
+          socialSubjectKeys.add(normalizeSubjectKey(s.name));
+          socialSubjectNames.add(s.name);
+        }
+      });
+    });
+  }
+
+  // Standard fallback for 2026_2_1 if empty
+  if (socialSubjectKeys.size === 0) {
+    ['사회와 문화', '현대사회와 윤리', '세계사', '세계시민과 지리'].forEach(n => {
+      socialSubjectKeys.add(normalizeSubjectKey(n));
+      socialSubjectNames.add(n);
+    });
+  }
+
+  // 2. Tally each student's chosen social subjects
+  const studentRecords = allStudents.map(st => {
+    const chosenSocial = [];
+    const otherChoices = [];
+
+    (st.choices || []).forEach(c => {
+      const clean = cleanSubjectName(c);
+      const norm = normalizeSubjectKey(clean);
+      const isSocial = socialSubjectKeys.has(norm) ||
+                       (getSubjectMeta(clean, cohortKey).category === '사회' && getSubjectMeta(clean, cohortKey).type !== '지정');
+
+      if (isSocial) {
+        if (!chosenSocial.some(s => normalizeSubjectKey(s) === norm)) {
+          chosenSocial.push(clean);
+        }
+      } else {
+        if (!otherChoices.some(s => normalizeSubjectKey(s) === norm)) {
+          otherChoices.push(clean);
+        }
+      }
+    });
+
+    return {
+      ...st,
+      socialCount: chosenSocial.length,
+      socialChoices: chosenSocial,
+      otherChoices: otherChoices
+    };
+  });
+
+  const count4 = studentRecords.filter(st => st.socialCount === 4);
+  const count3 = studentRecords.filter(st => st.socialCount === 3);
+  const count2 = studentRecords.filter(st => st.socialCount === 2);
+  const count1 = studentRecords.filter(st => st.socialCount === 1);
+  const count0 = studentRecords.filter(st => st.socialCount === 0);
+
+  return {
+    cohortKey,
+    totalStudents: allStudents.length,
+    socialSubjects: Array.from(socialSubjectNames),
+    studentRecords,
+    count4,
+    count3,
+    count2,
+    count1,
+    count0
+  };
+}
+
+// -------------------------------------------------------------
 // Subject Co-selection Analysis (For Timetable Blocks)
 // -------------------------------------------------------------
 function computeCoSelectionPairs(cohortKey) {
@@ -1215,12 +1310,54 @@ function renderCohortView(cohortKey) {
   const lowEnrollCount = subjects.filter(s => s.type === '선택' && s.count < 15).length;
   document.getElementById('kpi-low-enrollment').textContent = `${lowEnrollCount}개`;
 
-  // 3. Render Charts
-  renderBarChart(subjects);
+  // 3. Render Charts or Social Focus Card
+  const topSubjectsCard = document.getElementById('card-top-subjects');
+  const socialCountsCard = document.getElementById('card-social-counts');
+
+  if (cohortKey === '2026_2_1') {
+    if (topSubjectsCard) topSubjectsCard.style.display = 'none';
+    if (socialCountsCard) socialCountsCard.style.display = 'flex';
+    if (state.charts.bar) {
+      state.charts.bar.destroy();
+      state.charts.bar = null;
+    }
+    renderSocialCountsCard(cohortKey);
+  } else {
+    if (topSubjectsCard) topSubjectsCard.style.display = 'block';
+    if (socialCountsCard) socialCountsCard.style.display = 'none';
+    renderBarChart(subjects);
+  }
   renderDonutChart(subjects);
 
   // 4. Render Subject Table
   renderSubjectTable(subjects, totalCount);
+}
+
+// Render Social Studies Focus Card for 2026_2_1
+function renderSocialCountsCard(cohortKey = '2026_2_1') {
+  const info = getSocialStudiesChoiceInfo(cohortKey);
+  const total = info.totalStudents;
+
+  const count4 = info.count4.length;
+  const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+  const c4El = document.getElementById('social4-count');
+  const r4El = document.getElementById('social4-percent');
+  if (c4El) c4El.textContent = `${count4}명`;
+  if (r4El) r4El.textContent = `(${rate4}%)`;
+
+  const count3 = info.count3.length;
+  const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+  const c3El = document.getElementById('social3-count');
+  const r3El = document.getElementById('social3-percent');
+  if (c3El) c3El.textContent = `${count3}명`;
+  if (r3El) r3El.textContent = `(${rate3}%)`;
+
+  const count2 = info.count2.length;
+  const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+  const c2El = document.getElementById('social2-count');
+  const r2El = document.getElementById('social2-percent');
+  if (c2El) c2El.textContent = `${count2}명`;
+  if (r2El) r2El.textContent = `(${rate2}%)`;
 }
 
 // Render Horizontal Bar Chart
@@ -2413,6 +2550,108 @@ function open4ScienceModal() {
   document.getElementById('modal-sci4').classList.add('active');
 }
 
+let currentSocialFilter = 'all';
+
+function openSocialModal(filterCount = 'all') {
+  currentSocialFilter = String(filterCount);
+  const cohortKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
+  const info = getSocialStudiesChoiceInfo(cohortKey);
+
+  // Update modal title
+  const titleEl = document.getElementById('modal-social-title');
+  if (titleEl) {
+    const cohortName = state.data[cohortKey]?.name || '2026 입학생 (2학년 1학기)';
+    titleEl.textContent = `${cohortName} - 사회 교과 선택 학생 명단`;
+  }
+
+  // Update tabs labels with counts
+  const tabAll = document.getElementById('tab-social-all');
+  const tab4 = document.getElementById('tab-social-4');
+  const tab3 = document.getElementById('tab-social-3');
+  const tab2 = document.getElementById('tab-social-2');
+
+  const allTargetStudents = [...info.count4, ...info.count3, ...info.count2];
+  if (tabAll) tabAll.textContent = `전체 (총 ${allTargetStudents.length}명)`;
+  if (tab4) tab4.textContent = `사회 4개 (${info.count4.length}명)`;
+  if (tab3) tab3.textContent = `사회 3개 (${info.count3.length}명)`;
+  if (tab2) tab2.textContent = `사회 2개 (${info.count2.length}명)`;
+
+  // Set active filter button
+  document.querySelectorAll('#modal-social-filters .pill-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-social-tab') === currentSocialFilter);
+  });
+
+  renderSocialModalTable(info, currentSocialFilter);
+
+  const modal = document.getElementById('modal-social');
+  if (modal) modal.classList.add('active');
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function renderSocialModalTable(info, filterCount) {
+  const tbody = document.getElementById('modal-social-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  let list = [];
+  if (filterCount === '4') {
+    list = [...info.count4];
+  } else if (filterCount === '3') {
+    list = [...info.count3];
+  } else if (filterCount === '2') {
+    list = [...info.count2];
+  } else {
+    list = [...info.count4, ...info.count3, ...info.count2];
+  }
+
+  // Sort by ban asc, num asc
+  list.sort((a, b) => {
+    const banA = parseInt(a.ban, 10) || 0;
+    const banB = parseInt(b.ban, 10) || 0;
+    if (banA !== banB) return banA - banB;
+    const numA = parseInt(a.num, 10) || 0;
+    const numB = parseInt(b.num, 10) || 0;
+    return numA - numB;
+  });
+
+  if (list.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="7" style="text-align:center; padding:24px; color:#94A3B8;">선택 학생이 없습니다.</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  list.forEach((st, idx) => {
+    const nameTag = st.name ? ` <span style="font-size:0.8rem; color:#64748B; font-weight:normal;">(${st.name})</span>` : '';
+    
+    let badgeClass = 'badge-blue';
+    if (st.socialCount === 3) badgeClass = 'badge-green';
+    if (st.socialCount === 2) badgeClass = 'badge-purple';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center; color:#64748B; font-weight:600;">${idx + 1}</td>
+      <td style="text-align:center; font-weight:600;">${st.grade || '2'}</td>
+      <td style="text-align:center; font-weight:700; color:#334155;">${st.ban}반</td>
+      <td style="text-align:center; font-weight:700; color:#334155;">${st.num}번${nameTag}</td>
+      <td style="text-align:center;">
+        <span class="badge ${badgeClass}" style="font-size:0.78rem; font-weight:700;">사회 ${st.socialCount}개</span>
+      </td>
+      <td>
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+          ${(st.socialChoices || []).map(c => `<span class="badge badge-blue" style="font-size:0.8rem;">${c}</span>`).join(' ')}
+        </div>
+      </td>
+      <td>
+        ${(st.otherChoices && st.otherChoices.length > 0)
+          ? `<div style="display:flex; flex-wrap:wrap; gap:4px;">${st.otherChoices.map(c => `<span class="badge badge-gray" style="font-size:0.75rem;">${c}</span>`).join(' ')}</div>`
+          : '<span style="color:#CBD5E1; font-size:0.8rem;">-</span>'}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 function setupModalClosers() {
   document.querySelectorAll('[data-close]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3396,6 +3635,57 @@ function export4ScienceListToExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '과학집중_선택자');
   XLSX.writeFile(wb, `정명고_${currentKey}_과학집중_선택자_${sciFocus.students.length}명.xlsx`);
+}
+
+function exportSocialListToExcel() {
+  const cohortKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
+  const info = getSocialStudiesChoiceInfo(cohortKey);
+
+  let list = [];
+  let filterLabel = '전체(4·3·2개)';
+  if (currentSocialFilter === '4') {
+    list = [...info.count4];
+    filterLabel = '사회 4개 선택자';
+  } else if (currentSocialFilter === '3') {
+    list = [...info.count3];
+    filterLabel = '사회 3개 선택자';
+  } else if (currentSocialFilter === '2') {
+    list = [...info.count2];
+    filterLabel = '사회 2개 선택자';
+  } else {
+    list = [...info.count4, ...info.count3, ...info.count2];
+  }
+
+  list.sort((a, b) => {
+    const banA = parseInt(a.ban, 10) || 0;
+    const banB = parseInt(b.ban, 10) || 0;
+    if (banA !== banB) return banA - banB;
+    const numA = parseInt(a.num, 10) || 0;
+    const numB = parseInt(b.num, 10) || 0;
+    return numA - numB;
+  });
+
+  const exportData = [
+    ['연번', '학년', '반', '번호', '이름', '사회 선택 과목 수', '선택한 사회 교과목', '기타 선택 과목']
+  ];
+
+  list.forEach((st, idx) => {
+    exportData.push([
+      idx + 1,
+      st.grade || '2',
+      st.ban,
+      st.num,
+      st.name || '',
+      `사회 ${st.socialCount}개`,
+      (st.socialChoices || []).join(', '),
+      (st.otherChoices || []).join(', ')
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '사회선택자');
+  XLSX.writeFile(wb, `정명고_${cohortKey}_사회교과선택자_${filterLabel}_${list.length}명.xlsx`);
 }
 
 function exportCoSelectionMatrixToExcel() {
@@ -4675,6 +4965,26 @@ function setupEventListeners() {
     btnSci4.addEventListener('click', open4ScienceModal);
   }
 
+  // 9-B. Social Studies Choice Status Listeners
+  const btnSocial = document.getElementById('btn-view-social-students');
+  if (btnSocial) {
+    btnSocial.addEventListener('click', () => openSocialModal('all'));
+  }
+
+  document.querySelectorAll('.social-stat-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const filter = row.getAttribute('data-social-filter') || 'all';
+      openSocialModal(filter);
+    });
+  });
+
+  document.querySelectorAll('#modal-social-filters .pill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.getAttribute('data-social-tab') || 'all';
+      openSocialModal(filter);
+    });
+  });
+
   // 10. Load Sample Data Button
   const btnLoadSample = document.getElementById('btn-load-sample');
   if (btnLoadSample) {
@@ -4740,6 +5050,7 @@ function setupEventListeners() {
   // 12. Export Buttons
   document.getElementById('btn-export-excel')?.addEventListener('click', downloadExcelTemplate);
   document.getElementById('btn-export-sci4-excel')?.addEventListener('click', export4ScienceListToExcel);
+  document.getElementById('btn-export-social-excel')?.addEventListener('click', exportSocialListToExcel);
   document.getElementById('btn-export-matrix')?.addEventListener('click', exportCoSelectionMatrixToExcel);
   document.getElementById('btn-export-master-excel')?.addEventListener('click', exportMasterSummaryToExcel);
   document.getElementById('btn-export-master-pdf')?.addEventListener('click', () => {

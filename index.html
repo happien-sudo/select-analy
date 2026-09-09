@@ -208,8 +208,8 @@
 
       <!-- Charts Row (With 4-Science Box placed gracefully in the middle) -->
       <section class="charts-grid">
-        <!-- 1. Top Subjects Bar Chart -->
-        <div class="dashboard-card">
+        <!-- 1-A. Top Subjects Bar Chart (Hidden on 2026_2_1) -->
+        <div class="dashboard-card" id="card-top-subjects">
           <div class="card-header-row">
             <h2 class="card-title">
               <i data-lucide="bar-chart-2" style="width:20px; height:20px; color:#6366F1;"></i>
@@ -219,6 +219,62 @@
           </div>
           <div style="height: 210px; position: relative;">
             <canvas id="subjectBarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 1-B. Social Studies Choice Status Card (Displayed on 2026_2_1 in place of Top 12) -->
+        <div class="dashboard-card social-middle-card" id="card-social-counts" style="display: none;">
+          <div class="card-header-row" style="margin-bottom: 8px;">
+            <h2 class="card-title" style="font-size: 0.92rem;">
+              <i data-lucide="book-open-check" style="width:18px; height:18px; color:#2563EB;"></i>
+              <span>사회 교과 선택 현황</span>
+            </h2>
+            <span class="badge badge-blue">인문·사회 집중</span>
+          </div>
+          <div class="social-middle-body">
+            <div class="social-stats-list" style="display: flex; flex-direction: column; gap: 7px; flex: 1; justify-content: center; margin: 4px 0 6px;">
+              <div class="social-stat-row" data-social-filter="4" title="클릭 시 사회 교과 4개 선택자 명단 확인">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge badge-blue" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 4개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;">인문 집중 (올선택)</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 5px;">
+                  <span style="font-size: 1.12rem; font-weight: 800; color: #1D4ED8;" id="social4-count">0명</span>
+                  <span style="font-size: 0.76rem; font-weight: 600; color: #3B82F6;" id="social4-percent">(0.0%)</span>
+                </div>
+              </div>
+
+              <div class="social-stat-row" data-social-filter="3" title="클릭 시 사회 교과 3개 선택자 명단 확인">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge badge-green" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 3개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;">사회 3 + 과학 1</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 5px;">
+                  <span style="font-size: 1.12rem; font-weight: 800; color: #15803D;" id="social3-count">0명</span>
+                  <span style="font-size: 0.76rem; font-weight: 600; color: #16A34A;" id="social3-percent">(0.0%)</span>
+                </div>
+              </div>
+
+              <div class="social-stat-row" data-social-filter="2" title="클릭 시 사회 교과 2개 선택자 명단 확인">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge badge-purple" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 2개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;">사회 2 + 과학 2 (균형)</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 5px;">
+                  <span style="font-size: 1.12rem; font-weight: 800; color: #7E22CE;" id="social2-count">0명</span>
+                  <span style="font-size: 0.76rem; font-weight: 600; color: #9333EA;" id="social2-percent">(0.0%)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="social-desc-box" style="padding: 6px 10px; font-size: 0.76rem; line-height: 1.35; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; color: #64748B; margin-bottom: 6px;">
+              2학년 1학기 <strong>선택 4과목</strong> 중 사회 교과(사회와 문화, 현대사회와 윤리, 세계사, 세계시민과 지리) 선택 인원입니다.
+            </div>
+
+            <button class="btn btn-pastel-blue btn-sm" id="btn-view-social-students" style="width: 100%; padding: 6px 10px; font-size: 0.8rem;">
+              <i data-lucide="list-filter" style="width:14px; height:14px;"></i>
+              <span>사회 선택자 명단 확인</span>
+            </button>
           </div>
         </div>
 
@@ -828,6 +884,60 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modal-sci4">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Social Studies Selected Students List Modal -->
+  <div class="modal-overlay" id="modal-social">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; background:var(--pastel-blue); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#1D4ED8;">
+            <i data-lucide="book-open-check" style="width:20px; height:20px;"></i>
+          </div>
+          <div>
+            <h3 id="modal-social-title">2026 입학생 2학년 1학기 - 사회 교과 선택 학생 명단</h3>
+            <p style="font-size:0.82rem; color:#64748B; margin-top:2px;" id="modal-social-subtitle">선택 4과목 중 사회 교과목을 4개, 3개, 2개 선택한 학생 목록</p>
+          </div>
+        </div>
+        <button class="close-btn" data-close="modal-social">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <!-- Filter Tabs for 4, 3, 2 choices -->
+          <div class="pill-group" id="modal-social-filters" style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="pill-btn active" data-social-tab="all" id="tab-social-all">전체보기</button>
+            <button type="button" class="pill-btn" data-social-tab="4" id="tab-social-4">사회 4개 선택 (0명)</button>
+            <button type="button" class="pill-btn" data-social-tab="3" id="tab-social-3">사회 3개 선택 (0명)</button>
+            <button type="button" class="pill-btn" data-social-tab="2" id="tab-social-2">사회 2개 선택 (0명)</button>
+          </div>
+          <button class="btn btn-pastel-green btn-sm" id="btn-export-social-excel">
+            <i data-lucide="download" style="width:14px; height:14px;"></i>
+            명단 엑셀 다운로드
+          </button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:50px; text-align:center;">No</th>
+                <th style="width:60px; text-align:center;">학년</th>
+                <th style="width:70px; text-align:center;">반</th>
+                <th style="width:70px; text-align:center;">번호</th>
+                <th style="width:110px; text-align:center;">사회 선택 수</th>
+                <th>선택한 사회 교과목</th>
+                <th>기타 선택 과목</th>
+              </tr>
+            </thead>
+            <tbody id="modal-social-table-body">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modal-social">닫기</button>
       </div>
     </div>
   </div>
