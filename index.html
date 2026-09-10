@@ -233,10 +233,10 @@
           </div>
           <div class="social-middle-body">
             <div class="social-stats-list" style="display: flex; flex-direction: column; gap: 7px; flex: 1; justify-content: center; margin: 4px 0 6px;">
-              <div class="social-stat-row" data-social-filter="4" title="클릭 시 사회 교과 4개 선택자 명단 확인">
+              <div class="social-stat-row" data-social-filter="4" title="클릭 시 사회 교과 선택자 명단 확인">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span class="badge badge-blue" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 4개 선택</span>
-                  <span style="font-size: 0.76rem; color: #475569;">인문 집중 (올선택)</span>
+                  <span class="badge badge-blue" id="social-row1-badge" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 4개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;" id="social-row1-subtext">인문 집중 (올선택)</span>
                 </div>
                 <div style="display: flex; align-items: baseline; gap: 5px;">
                   <span style="font-size: 1.12rem; font-weight: 800; color: #1D4ED8;" id="social4-count">0명</span>
@@ -246,8 +246,8 @@
 
               <div class="social-stat-row" data-social-filter="3" title="클릭 시 사회 교과 3개 선택자 명단 확인">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span class="badge badge-green" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 3개 선택</span>
-                  <span style="font-size: 0.76rem; color: #475569;">사회 3 + 과학 1</span>
+                  <span class="badge badge-green" id="social-row2-badge" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 3개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;" id="social-row2-subtext">사회 3 + 과학 1</span>
                 </div>
                 <div style="display: flex; align-items: baseline; gap: 5px;">
                   <span style="font-size: 1.12rem; font-weight: 800; color: #15803D;" id="social3-count">0명</span>
@@ -257,8 +257,8 @@
 
               <div class="social-stat-row" data-social-filter="2" title="클릭 시 사회 교과 2개 선택자 명단 확인">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <span class="badge badge-purple" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 2개 선택</span>
-                  <span style="font-size: 0.76rem; color: #475569;">사회 2 + 과학 2 (균형)</span>
+                  <span class="badge badge-purple" id="social-row3-badge" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">사회 2개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;" id="social-row3-subtext">사회 2 + 과학 2 (균형)</span>
                 </div>
                 <div style="display: flex; align-items: baseline; gap: 5px;">
                   <span style="font-size: 1.12rem; font-weight: 800; color: #7E22CE;" id="social2-count">0명</span>
@@ -267,7 +267,7 @@
               </div>
             </div>
 
-            <div class="social-desc-box" style="padding: 6px 10px; font-size: 0.76rem; line-height: 1.35; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; color: #64748B; margin-bottom: 6px;">
+            <div class="social-desc-box" id="social-desc-box" style="padding: 6px 10px; font-size: 0.76rem; line-height: 1.35; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; color: #64748B; margin-bottom: 6px;">
               2학년 1학기 <strong>선택 4과목</strong> 중 사회 교과(사회와 문화, 현대사회와 윤리, 세계사, 세계시민과 지리) 선택 인원입니다.
             </div>
 
@@ -278,8 +278,63 @@
           </div>
         </div>
 
-        <!-- 2. 4-Science Calm Status Card (Placed in the middle, tone balanced) -->
-        <!-- 2. Science Focus Card (Placed in the middle, tone balanced) -->
+        <!-- 2-A. Science Studies Choice Status Card (Displayed on 2026_2_1 in place of Old 4-Science Banner) -->
+        <div class="dashboard-card science-middle-card" id="card-science-counts" style="display: none;">
+          <div class="card-header-row" style="margin-bottom: 8px;">
+            <h2 class="card-title" style="font-size: 0.92rem;">
+              <i data-lucide="atom" style="width:18px; height:18px; color:#E11D48;"></i>
+              <span>과학 교과 선택 현황</span>
+            </h2>
+            <span class="badge badge-pink">자연·공학 집중</span>
+          </div>
+          <div class="science-middle-body">
+            <div class="science-stats-list" style="display: flex; flex-direction: column; gap: 7px; flex: 1; justify-content: center; margin: 4px 0 6px;">
+              <div class="science-stat-row" data-science-filter="4" title="클릭 시 과학 교과 선택자 명단 확인">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge badge-pink" id="science-row1-badge" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">과학 4개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;" id="science-row1-subtext">올선택 (🔬 과학중점과정)</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 5px;">
+                  <span style="font-size: 1.12rem; font-weight: 800; color: #E11D48;" id="science4-count">0명</span>
+                  <span style="font-size: 0.76rem; font-weight: 600; color: #BE123C;" id="science4-percent">(0.0%)</span>
+                </div>
+              </div>
+
+              <div class="science-stat-row" data-science-filter="3" title="클릭 시 과학 교과 선택자 명단 확인">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge badge-amber" id="science-row2-badge" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">과학 3개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;" id="science-row2-subtext">과학 3 + 사회 1</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 5px;">
+                  <span style="font-size: 1.12rem; font-weight: 800; color: #D97706;" id="science3-count">0명</span>
+                  <span style="font-size: 0.76rem; font-weight: 600; color: #B45309;" id="science3-percent">(0.0%)</span>
+                </div>
+              </div>
+
+              <div class="science-stat-row" data-science-filter="2" title="클릭 시 과학 교과 선택자 명단 확인">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge badge-purple" id="science-row3-badge" style="font-size: 0.74rem; font-weight: 700; padding: 2px 7px;">과학 2개 선택</span>
+                  <span style="font-size: 0.76rem; color: #475569;" id="science-row3-subtext">과학 2 + 사회 2 (균형)</span>
+                </div>
+                <div style="display: flex; align-items: baseline; gap: 5px;">
+                  <span style="font-size: 1.12rem; font-weight: 800; color: #7E22CE;" id="science2-count">0명</span>
+                  <span style="font-size: 0.76rem; font-weight: 600; color: #9333EA;" id="science2-percent">(0.0%)</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="science-desc-box" id="science-desc-box" style="padding: 6px 10px; font-size: 0.76rem; line-height: 1.35; background: #FFF1F2; border: 1px solid #FFE4E6; border-radius: 6px; color: #64748B; margin-bottom: 6px;">
+              2학년 1학기 <strong>선택 4과목</strong> 중 과학 교과(물리학·화학·생명과학·지구과학) 선택 인원입니다. (4과목 = 과학중점과정)
+            </div>
+
+            <button class="btn btn-pastel-pink btn-sm" id="btn-view-science-multi-students" style="width: 100%; padding: 6px 10px; font-size: 0.8rem;">
+              <i data-lucide="list-filter" style="width:14px; height:14px;"></i>
+              <span>과학 선택자 명단 확인</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2-B. Existing Science Focus Card (Placed in the middle for 2026_2_2, 2025_3_1) -->
         <div class="dashboard-card sci4-middle-card" id="sci4-banner" style="display: none;">
           <div class="card-header-row" style="margin-bottom: 8px;">
             <h2 class="card-title" style="font-size: 0.92rem;" id="sci-focus-title">
@@ -303,8 +358,8 @@
           </div>
         </div>
 
-        <!-- 3. Subject Area Donut Chart -->
-        <div class="dashboard-card">
+        <!-- 3-A. Subject Area Donut Chart (Hidden on 2026_2_1) -->
+        <div class="dashboard-card" id="card-category-donut">
           <div class="card-header-row">
             <h2 class="card-title">
               <i data-lucide="pie-chart" style="width:20px; height:20px; color:#38BDF8;"></i>
@@ -314,6 +369,93 @@
           </div>
           <div style="height: 210px; position: relative; display:flex; align-items:center; justify-content:center;">
             <canvas id="categoryDonutChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 3-B. Track Comparison Table Card (Displayed on 2026_2_1 in place of Donut Chart) -->
+        <div class="dashboard-card track-compare-card" id="card-track-compare" style="display: none;">
+          <div class="card-header-row" style="margin-bottom: 6px;">
+            <h2 class="card-title" style="font-size: 0.92rem;">
+              <i data-lucide="scale" style="width:18px; height:18px; color:#6366F1;"></i>
+              <span>계열별 선택 비중 비교</span>
+            </h2>
+            <span class="badge badge-indigo">인문 vs 자연</span>
+          </div>
+          <div class="track-compare-body">
+            <!-- Visual Ratio Stacked Bar -->
+            <div style="margin-bottom: 7px;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.74rem; font-weight: 700; margin-bottom: 4px;">
+                <span style="color: #1D4ED8;">인문사회 <span id="track-humanities-total-rate">0.0%</span></span>
+                <span style="color: #7E22CE;">융합(2+2) <span id="track-balanced-rate">0.0%</span></span>
+                <span style="color: #BE123C;">자연과학 <span id="track-nature-total-rate">0.0%</span></span>
+              </div>
+              <div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #F1F5F9;">
+                <div id="bar-humanities-ratio" style="background: #3B82F6; width: 0%; transition: width 0.3s;" title="인문사회계열"></div>
+                <div id="bar-balanced-ratio" style="background: #A855F7; width: 0%; transition: width 0.3s;" title="융합(2+2)"></div>
+                <div id="bar-nature-ratio" style="background: #F43F5E; width: 0%; transition: width 0.3s;" title="자연과학계열(과학중점 포함)"></div>
+              </div>
+            </div>
+
+            <!-- Comparison Table -->
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; line-height: 1.35; text-align: center;">
+                <thead>
+                  <tr style="background: #F8FAFC; border-top: 1px solid #E2E8F0; border-bottom: 1px solid #CBD5E1; color: #475569; font-weight: 700;">
+                    <th style="padding: 4px 6px; text-align: left;">계열</th>
+                    <th style="padding: 4px 6px; text-align: left;">선택 패턴</th>
+                    <th style="padding: 4px 6px;">인원</th>
+                    <th style="padding: 4px 6px;">비중</th>
+                  </tr>
+                </thead>
+                <tbody id="track-compare-tbody">
+                  <!-- Populated dynamically by renderTrackCompareCard -->
+                  <!-- 인문사회계열 -->
+                  <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('4')" title="클릭 시 사회 4개(인문집중) 선택자 명단 확인">
+                    <td rowspan="2" style="padding: 4px 6px; font-weight: 700; color: #1E40AF; background: #EFF6FF; text-align: left; vertical-align: middle; border-right: 1px solid #DBEAFE;">
+                      인문사회<br><span id="tbl-humanities-subtotal" style="font-size: 0.7rem; font-weight: normal; color: #3B82F6;">(소계: 0명)</span>
+                    </td>
+                    <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 4개 (인문집중)</td>
+                    <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;" id="tbl-soc4-count">0명</td>
+                    <td style="padding: 3px 6px; color: #64748B;" id="tbl-soc4-rate">0.0%</td>
+                  </tr>
+                  <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openSocialModal('3')" title="클릭 시 사회 3개 선택자 명단 확인">
+                    <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 3개 + 과학 1개</td>
+                    <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;" id="tbl-soc3-count">0명</td>
+                    <td style="padding: 3px 6px; color: #64748B;" id="tbl-soc3-rate">0.0%</td>
+                  </tr>
+
+                  <!-- 자연과학계열 -->
+                  <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openScienceMultiModal('4')" title="클릭 시 과학 4개(과학중점과정) 선택자 명단 확인">
+                    <td rowspan="2" style="padding: 4px 6px; font-weight: 700; color: #9F1239; background: #FFF1F2; text-align: left; vertical-align: middle; border-right: 1px solid #FFE4E6;">
+                      자연과학<br><span id="tbl-nature-subtotal" style="font-size: 0.7rem; font-weight: normal; color: #E11D48;">(소계: 0명)</span>
+                    </td>
+                    <td style="padding: 3px 6px; text-align: left; color: #334155;">
+                      과학 4개 <span class="badge badge-pink" style="font-size: 0.68rem; font-weight: 700; padding: 1px 4px;">🔬 과학중점과정</span>
+                    </td>
+                    <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;" id="tbl-sci4-count">0명</td>
+                    <td style="padding: 3px 6px; color: #64748B;" id="tbl-sci4-rate">0.0%</td>
+                  </tr>
+                  <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openScienceMultiModal('3')" title="클릭 시 과학 3개 선택자 명단 확인">
+                    <td style="padding: 3px 6px; text-align: left; color: #334155;">과학 3개 + 사회 1개</td>
+                    <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;" id="tbl-sci3-count">0명</td>
+                    <td style="padding: 3px 6px; color: #64748B;" id="tbl-sci3-rate">0.0%</td>
+                  </tr>
+
+                  <!-- 융합/균형 -->
+                  <tr style="background: #FAF5FF; border-bottom: 1px solid #E2E8F0; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 사회 2개 + 과학 2개(융합·균형) 선택자 명단 확인">
+                    <td style="padding: 4px 6px; font-weight: 700; color: #6B21A8; text-align: left; border-right: 1px solid #F3E8FF;">융합(균형)</td>
+                    <td style="padding: 3px 6px; text-align: left; color: #475569;">사회 2개 + 과학 2개</td>
+                    <td style="padding: 3px 6px; font-weight: 700; color: #7E22CE;" id="tbl-bal-count">0명</td>
+                    <td style="padding: 3px 6px; color: #64748B;" id="tbl-bal-rate">0.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Footer note -->
+            <div id="track-compare-note" style="font-size: 0.72rem; color: #94A3B8; margin-top: 5px; text-align: right;">
+              * 과학 4과목 선택자는 <strong>과학중점과정</strong>으로 분류됩니다.
+            </div>
           </div>
         </div>
       </section>
@@ -843,6 +985,93 @@
 
   </div>
 
+  <!-- MODAL 0: Welcome / Quick Start (Excel Upload & Template Download) -->
+  <div class="modal-overlay" id="modal-welcome">
+    <div class="modal-window" style="max-width: 660px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #EEF2FF, #F5F3FF); border-bottom: 1px solid #E0E7FF; padding: 18px 24px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:42px; height:42px; background: linear-gradient(135deg, #6366F1, #8B5CF6); border-radius:12px; display:flex; align-items:center; justify-content:center; color:white; flex-shrink:0; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);">
+            <i data-lucide="sparkles" style="width:22px; height:22px;"></i>
+          </div>
+          <div>
+            <h3 style="color:#1E1B4B; font-size:1.15rem; margin:0; font-weight:800;">교육과정 과목선택 데이터 분석 시스템</h3>
+            <p style="font-size:0.83rem; color:#4338CA; margin-top:2px; font-weight:500;">엑셀 파일을 업로드하여 바로 분석하거나, 표준 양식을 다운로드하세요.</p>
+          </div>
+        </div>
+        <button class="close-btn" data-close="modal-welcome">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 22px 24px; display:flex; flex-direction:column; gap:16px;">
+        
+        <!-- Info banner -->
+        <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px;">
+          <i data-lucide="check-circle-2" style="width:18px; height:18px; color:#16A34A; flex-shrink:0;"></i>
+          <span style="font-size:0.82rem; color:#15803D; line-height:1.4;">
+            현재 <strong>정명고등학교 2026·2025 입학생 기준 시뮬레이션 샘플 데이터(355명)</strong>가 기본 로드되어 있습니다.
+          </span>
+        </div>
+
+        <!-- 2 Main Cards Grid -->
+        <div class="welcome-cards-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+          
+          <!-- Card A: Upload Excel File -->
+          <div id="welcome-drop-zone">
+            <div>
+              <div style="width:48px; height:48px; background:#EEF2FF; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#4F46E5; margin:0 auto 10px; border:1px solid #C7D2FE;">
+                <i data-lucide="upload-cloud" style="width:24px; height:24px;"></i>
+              </div>
+              <h4 style="font-size:0.96rem; font-weight:800; color:#1E293B; margin-bottom:4px;">엑셀 파일 업로드</h4>
+              <p style="font-size:0.78rem; color:#64748B; line-height:1.4; margin-bottom:12px;">
+                과목선택 조사 결과 엑셀 파일을<br>이곳에 끌어다 놓거나 선택하세요.<br>
+                <span style="color:#6366F1; font-weight:600;">(.xlsx, .xls, .csv 지원)</span>
+              </p>
+            </div>
+            <div>
+              <button type="button" class="btn btn-primary" id="btn-welcome-browse" style="width:100%; padding:8px 12px; font-size:0.84rem; font-weight:700;">
+                <i data-lucide="folder-up" style="width:15px; height:15px;"></i>
+                파일 선택하여 분석
+              </button>
+            </div>
+          </div>
+
+          <!-- Card B: Download Excel Template -->
+          <div class="welcome-template-card">
+            <div>
+              <div style="width:48px; height:48px; background:#ECFDF5; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#059669; margin:0 auto 10px; border:1px solid #A7F3D0;">
+                <i data-lucide="file-spreadsheet" style="width:24px; height:24px;"></i>
+              </div>
+              <h4 style="font-size:0.96rem; font-weight:800; color:#1E293B; margin-bottom:4px;">엑셀 표준 양식 받기</h4>
+              <p style="font-size:0.78rem; color:#64748B; line-height:1.4; margin-bottom:12px;">
+                2022 개정 교육과정 선택과목 입력 표준 서식을 내려받아 학교 데이터를 정리할 수 있습니다.
+              </p>
+            </div>
+            <div>
+              <button type="button" class="btn btn-pastel-green" id="btn-welcome-download-template" style="width:100%; padding:8px 12px; font-size:0.84rem; font-weight:700;">
+                <i data-lucide="download" style="width:15px; height:15px;"></i>
+                표준 양식 다운로드 (.xlsx)
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Guide Box -->
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:10px 14px; font-size:0.78rem; color:#64748B; line-height:1.45;">
+          💡 <strong>양식 작성 팁</strong>: 학기별 시트(2학년 1·2학기, 3학년 1·2학기)에 학생별 선택 여부(1 또는 O)를 입력하여 업로드하시면 모든 차트와 분반·시간표 시뮬레이션이 자동 산출됩니다.
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="background:#F8FAFC; border-top:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:0.78rem; color:#94A3B8;">언제든지 상단 메뉴에서 엑셀을 다시 업로드할 수 있습니다.</span>
+        <button class="btn btn-outline" data-close="modal-welcome" id="btn-welcome-explore" style="padding:8px 18px; font-size:0.84rem; font-weight:600;">
+          <span>샘플 데이터로 대시보드 둘러보기</span>
+          <i data-lucide="arrow-right" style="width:15px; height:15px;"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL 1: 4-Science Students Full Modal -->
   <div class="modal-overlay" id="modal-sci4">
     <div class="modal-window">
@@ -938,6 +1167,60 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" data-close="modal-social">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Science Studies Selected Students List Modal -->
+  <div class="modal-overlay" id="modal-science-multi">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; background:var(--pastel-pink); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#BE123C;">
+            <i data-lucide="atom" style="width:20px; height:20px;"></i>
+          </div>
+          <div>
+            <h3 id="modal-science-multi-title">2026 입학생 2학년 1학기 - 과학 교과 선택 학생 명단</h3>
+            <p style="font-size:0.82rem; color:#64748B; margin-top:2px;" id="modal-science-multi-subtitle">선택 4과목 중 과학 교과목을 4개(과학중점), 3개, 2개 선택한 학생 목록</p>
+          </div>
+        </div>
+        <button class="close-btn" data-close="modal-science-multi">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <!-- Filter Tabs for 4, 3, 2 choices -->
+          <div class="pill-group" id="modal-science-multi-filters" style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="pill-btn active" data-science-tab="all" id="tab-science-all">전체보기</button>
+            <button type="button" class="pill-btn" data-science-tab="4" id="tab-science-4">과학 4개 (과학중점) (0명)</button>
+            <button type="button" class="pill-btn" data-science-tab="3" id="tab-science-3">과학 3개 선택 (0명)</button>
+            <button type="button" class="pill-btn" data-science-tab="2" id="tab-science-2">과학 2개 선택 (0명)</button>
+          </div>
+          <button class="btn btn-pastel-green btn-sm" id="btn-export-science-multi-excel">
+            <i data-lucide="download" style="width:14px; height:14px;"></i>
+            명단 엑셀 다운로드
+          </button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:50px; text-align:center;">No</th>
+                <th style="width:60px; text-align:center;">학년</th>
+                <th style="width:70px; text-align:center;">반</th>
+                <th style="width:70px; text-align:center;">번호</th>
+                <th style="width:140px; text-align:center;">과학 선택 구분</th>
+                <th>선택한 과학 교과목</th>
+                <th>기타 선택 과목</th>
+              </tr>
+            </thead>
+            <tbody id="modal-science-multi-table-body">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="modal-science-multi">닫기</button>
       </div>
     </div>
   </div>

@@ -1099,8 +1099,8 @@ function get4ScienceStudents(cohortKey = '2026_2_1') {
 }
 
 // -------------------------------------------------------------
-// Social Studies Choice Analysis (2026 2-1)
-// 2026 입학생 2학년 1학기: 사회 교과 4개, 3개, 2개 선택자 집계
+// Social Studies Choice Analysis (All Cohorts)
+// 사회 교과목 선택자 집계
 // -------------------------------------------------------------
 function getSocialStudiesChoiceInfo(cohortKey = '2026_2_1') {
   const targetCohort = state.data[cohortKey];
@@ -1132,9 +1132,16 @@ function getSocialStudiesChoiceInfo(cohortKey = '2026_2_1') {
     });
   }
 
-  // Standard fallback for 2026_2_1 if empty
+  // Standard fallback defaults per cohort
+  const defaultSocialMap = {
+    '2026_2_1': ['사회와 문화', '세계사', '현대사회와 윤리', '세계시민과 지리'],
+    '2026_2_2': ['법과 사회', '윤리와 사상', '동아시아 역사 기행', '한국지리 탐구', '사회문제 탐구'],
+    '2025_3_1': ['국제 관계의 이해', '인문학과 윤리', '도시의 미래 탐구', '기후변화와 지속가능한 세계'],
+    '2025_3_2': ['여행지리', '윤리문제 탐구', '금융과 경제생활', '역사로 탐구하는 현대 세계']
+  };
+  const defaults = defaultSocialMap[cohortKey] || defaultSocialMap['2026_2_1'];
   if (socialSubjectKeys.size === 0) {
-    ['사회와 문화', '현대사회와 윤리', '세계사', '세계시민과 지리'].forEach(n => {
+    defaults.forEach(n => {
       socialSubjectKeys.add(normalizeSubjectKey(n));
       socialSubjectNames.add(n);
     });
@@ -1149,7 +1156,7 @@ function getSocialStudiesChoiceInfo(cohortKey = '2026_2_1') {
       const clean = cleanSubjectName(c);
       const norm = normalizeSubjectKey(clean);
       const isSocial = socialSubjectKeys.has(norm) ||
-                       (getSubjectMeta(clean, cohortKey).category === '사회' && getSubjectMeta(clean, cohortKey).type !== '지정');
+                        (getSubjectMeta(clean, cohortKey).category === '사회' && getSubjectMeta(clean, cohortKey).type !== '지정');
 
       if (isSocial) {
         if (!chosenSocial.some(s => normalizeSubjectKey(s) === norm)) {
@@ -1170,7 +1177,9 @@ function getSocialStudiesChoiceInfo(cohortKey = '2026_2_1') {
     };
   });
 
+  const count5 = studentRecords.filter(st => st.socialCount === 5);
   const count4 = studentRecords.filter(st => st.socialCount === 4);
+  const count4plus = studentRecords.filter(st => st.socialCount >= 4);
   const count3 = studentRecords.filter(st => st.socialCount === 3);
   const count2 = studentRecords.filter(st => st.socialCount === 2);
   const count1 = studentRecords.filter(st => st.socialCount === 1);
@@ -1181,8 +1190,118 @@ function getSocialStudiesChoiceInfo(cohortKey = '2026_2_1') {
     totalStudents: allStudents.length,
     socialSubjects: Array.from(socialSubjectNames),
     studentRecords,
+    count5,
     count4,
+    count4plus,
     count3,
+    count2,
+    count1,
+    count0
+  };
+}
+
+// -------------------------------------------------------------
+// Science Studies Choice Analysis (All Cohorts)
+// 과학 교과목 선택자 집계 (과학중점과정 포함)
+// -------------------------------------------------------------
+function getScienceStudiesChoiceInfo(cohortKey = '2026_2_1') {
+  const targetCohort = state.data[cohortKey];
+  const allStudents = targetCohort?.students || [];
+  const subjects = targetCohort?.subjects || [];
+
+  // 1. Identify all science elective subjects for this cohort
+  const scienceSubjectKeys = new Set();
+  const scienceSubjectNames = new Set();
+
+  // From loaded subjects where category is '과학' and type is '선택'
+  subjects.forEach(s => {
+    if (s.category === '과학' && s.type === '선택') {
+      scienceSubjectKeys.add(normalizeSubjectKey(s.name));
+      scienceSubjectNames.add(s.name);
+    }
+  });
+
+  // From curriculum definition
+  const def = CURRICULUM_DEFINITION[cohortKey];
+  if (def) {
+    def.groups?.forEach(g => {
+      g.subjects?.forEach(s => {
+        if (s.category === '과학') {
+          scienceSubjectKeys.add(normalizeSubjectKey(s.name));
+          scienceSubjectNames.add(s.name);
+        }
+      });
+    });
+  }
+
+  // Standard fallback defaults per cohort
+  const defaultScienceMap = {
+    '2026_2_1': ['물리학', '화학', '생명과학', '지구과학'],
+    '2026_2_2': ['역학과 에너지', '화학 반응의 세계', '세포와 물질대사', '지구시스템과학', '과학과제 연구'],
+    '2025_3_1': ['전자기와 양자', '물질과 에너지', '생물의 유전', '행성우주과학'],
+    '2025_3_2': ['과학의 역사와 문화', '기후변화와 환경생태', '융합과학 탐구']
+  };
+  const defaults = defaultScienceMap[cohortKey] || defaultScienceMap['2026_2_1'];
+  if (scienceSubjectKeys.size === 0) {
+    defaults.forEach(n => {
+      scienceSubjectKeys.add(normalizeSubjectKey(n));
+      scienceSubjectNames.add(n);
+    });
+  }
+
+  // 2. Tally each student's chosen science subjects
+  const studentRecords = allStudents.map(st => {
+    const chosenScience = [];
+    const otherChoices = [];
+
+    (st.choices || []).forEach(c => {
+      const clean = cleanSubjectName(c);
+      const norm = normalizeSubjectKey(clean);
+      const isScience = scienceSubjectKeys.has(norm) ||
+                        (getSubjectMeta(clean, cohortKey).category === '과학' && getSubjectMeta(clean, cohortKey).type !== '지정');
+
+      if (isScience) {
+        if (!chosenScience.some(s => normalizeSubjectKey(s) === norm)) {
+          chosenScience.push(clean);
+        }
+      } else {
+        if (!otherChoices.some(s => normalizeSubjectKey(s) === norm)) {
+          otherChoices.push(clean);
+        }
+      }
+    });
+
+    const scienceCount = chosenScience.length;
+    const isSciFocusTrack = (cohortKey === '2026_2_1' || cohortKey === '2026_2_2') ? (scienceCount >= 4) : false;
+
+    return {
+      ...st,
+      scienceCount,
+      scienceChoices: chosenScience,
+      otherChoices,
+      isSciFocusTrack
+    };
+  });
+
+  const count5 = studentRecords.filter(st => st.scienceCount === 5);
+  const count4 = studentRecords.filter(st => st.scienceCount === 4);
+  const count4plus = studentRecords.filter(st => st.scienceCount >= 4);
+  const count3 = studentRecords.filter(st => st.scienceCount === 3);
+  const count3plus = studentRecords.filter(st => st.scienceCount >= 3);
+  const count2 = studentRecords.filter(st => st.scienceCount === 2);
+  const count1 = studentRecords.filter(st => st.scienceCount === 1);
+  const count0 = studentRecords.filter(st => st.scienceCount === 0);
+
+  return {
+    cohortKey,
+    totalStudents: allStudents.length,
+    scienceSubjects: Array.from(scienceSubjectNames),
+    studentRecords,
+    count5,
+    count4,
+    count4plus,
+    count3,
+    count3plus,
     count2,
     count1,
     count0
@@ -1270,32 +1389,46 @@ function renderCohortView(cohortKey) {
   const subjects = cohort.subjects || [];
   const totalCount = students.length;
 
-  // 1. Science Focus Card (Positioned gracefully between charts on 2026 2-1, 2026 2-2, 2025 3-1)
-  const sci4Banner = document.getElementById('sci4-banner');
   const chartsGrid = document.querySelector('.charts-grid');
-  const sciFocus = getScienceFocusInfo(cohortKey);
 
-  if (sciFocus.active) {
-    if (sci4Banner) sci4Banner.style.display = 'flex';
-    if (chartsGrid) chartsGrid.classList.remove('hide-sci4');
+  // DOM elements for conditional cards
+  const topSubjectsCard = document.getElementById('card-top-subjects');
+  const socialCountsCard = document.getElementById('card-social-counts');
 
-    const titleEl = document.getElementById('sci-focus-title-text');
-    if (titleEl) titleEl.textContent = sciFocus.title;
-    const badgeEl = document.getElementById('sci-focus-badge');
-    if (badgeEl) badgeEl.textContent = sciFocus.badge;
-    const descEl = document.getElementById('sci-focus-desc');
-    if (descEl) descEl.innerHTML = sciFocus.desc;
-    const btnTextEl = document.getElementById('sci-focus-btn-text');
-    if (btnTextEl) btnTextEl.textContent = sciFocus.btnText;
+  const cardScienceCounts = document.getElementById('card-science-counts');
+  const sci4Banner = document.getElementById('sci4-banner');
 
-    const count = sciFocus.students.length;
-    document.getElementById('sci4-count').textContent = `${count}명`;
-    const sciRate = totalCount > 0 ? ((count / totalCount) * 100).toFixed(1) : '0.0';
-    document.getElementById('sci4-percent').textContent = `전체 학생의 ${sciRate}% (${count}명)`;
-  } else {
-    if (sci4Banner) sci4Banner.style.display = 'none';
-    if (chartsGrid) chartsGrid.classList.add('hide-sci4');
+  const cardCategoryDonut = document.getElementById('card-category-donut');
+  const cardTrackCompare = document.getElementById('card-track-compare');
+
+  // 1. Cards 1, 2, 3 Layout: Unified across all 4 cohorts
+  // Card 1: Social Studies Choice Status (#card-social-counts)
+  // Card 2: Science Studies Choice Status (#card-science-counts)
+  // Card 3: Track Comparison Table (#card-track-compare)
+  if (chartsGrid) chartsGrid.classList.remove('hide-sci4');
+
+  // Hide old Top 12 Bar Chart & show Card 1 (Social Counts)
+  if (topSubjectsCard) topSubjectsCard.style.display = 'none';
+  if (socialCountsCard) socialCountsCard.style.display = 'flex';
+  if (state.charts.bar) {
+    state.charts.bar.destroy();
+    state.charts.bar = null;
   }
+  renderSocialCountsCard(cohortKey);
+
+  // Hide old 4-Sci Banner & show Card 2 (Science Counts)
+  if (sci4Banner) sci4Banner.style.display = 'none';
+  if (cardScienceCounts) cardScienceCounts.style.display = 'flex';
+  renderScienceCountsCard(cohortKey);
+
+  // Hide old Category Donut Chart & show Card 3 (Track Compare Table)
+  if (cardCategoryDonut) cardCategoryDonut.style.display = 'none';
+  if (cardTrackCompare) cardTrackCompare.style.display = 'flex';
+  if (state.charts.donut) {
+    state.charts.donut.destroy();
+    state.charts.donut = null;
+  }
+  renderTrackCompareCard(cohortKey);
 
   // 2. KPI Summary Cards
   document.getElementById('kpi-total-students').textContent = `${totalCount}명`;
@@ -1310,54 +1443,614 @@ function renderCohortView(cohortKey) {
   const lowEnrollCount = subjects.filter(s => s.type === '선택' && s.count < 15).length;
   document.getElementById('kpi-low-enrollment').textContent = `${lowEnrollCount}개`;
 
-  // 3. Render Charts or Social Focus Card
-  const topSubjectsCard = document.getElementById('card-top-subjects');
-  const socialCountsCard = document.getElementById('card-social-counts');
-
-  if (cohortKey === '2026_2_1') {
-    if (topSubjectsCard) topSubjectsCard.style.display = 'none';
-    if (socialCountsCard) socialCountsCard.style.display = 'flex';
-    if (state.charts.bar) {
-      state.charts.bar.destroy();
-      state.charts.bar = null;
-    }
-    renderSocialCountsCard(cohortKey);
-  } else {
-    if (topSubjectsCard) topSubjectsCard.style.display = 'block';
-    if (socialCountsCard) socialCountsCard.style.display = 'none';
-    renderBarChart(subjects);
-  }
-  renderDonutChart(subjects);
-
-  // 4. Render Subject Table
+  // 3. Render Subject Table
   renderSubjectTable(subjects, totalCount);
 }
 
-// Render Social Studies Focus Card for 2026_2_1
+// Render Social Studies Focus Card (All Cohorts)
 function renderSocialCountsCard(cohortKey = '2026_2_1') {
   const info = getSocialStudiesChoiceInfo(cohortKey);
   const total = info.totalStudents;
 
-  const count4 = info.count4.length;
-  const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+  const row1Badge = document.getElementById('social-row1-badge');
+  const row1Subtext = document.getElementById('social-row1-subtext');
   const c4El = document.getElementById('social4-count');
   const r4El = document.getElementById('social4-percent');
-  if (c4El) c4El.textContent = `${count4}명`;
-  if (r4El) r4El.textContent = `(${rate4}%)`;
 
-  const count3 = info.count3.length;
-  const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+  const row2Badge = document.getElementById('social-row2-badge');
+  const row2Subtext = document.getElementById('social-row2-subtext');
   const c3El = document.getElementById('social3-count');
   const r3El = document.getElementById('social3-percent');
-  if (c3El) c3El.textContent = `${count3}명`;
-  if (r3El) r3El.textContent = `(${rate3}%)`;
 
-  const count2 = info.count2.length;
-  const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+  const row3Badge = document.getElementById('social-row3-badge');
+  const row3Subtext = document.getElementById('social-row3-subtext');
   const c2El = document.getElementById('social2-count');
   const r2El = document.getElementById('social2-percent');
-  if (c2El) c2El.textContent = `${count2}명`;
-  if (r2El) r2El.textContent = `(${rate2}%)`;
+
+  const descBox = document.getElementById('social-desc-box');
+  const statRows = document.querySelectorAll('#card-social-counts .social-stat-row');
+
+  if (cohortKey === '2026_2_2') {
+    // 2-2: 법과 사회, 윤리와 사상, 동아시아 역사 기행, 한국지리 탐구, 사회문제 탐구 (5과목)
+    const count4plus = info.count4plus.length;
+    const rate4plus = total > 0 ? ((count4plus / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '사회 4~5개 선택';
+    if (row1Subtext) row1Subtext.textContent = `인문 집중 (5개 ${info.count5.length}명, 4개 ${info.count4.length}명)`;
+    if (c4El) c4El.textContent = `${count4plus}명`;
+    if (r4El) r4El.textContent = `(${rate4plus}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-social-filter', '4plus');
+
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '사회 3개 선택';
+    if (row2Subtext) row2Subtext.textContent = '사회 3과목 집중';
+    if (c3El) c3El.textContent = `${count3}명`;
+    if (r3El) r3El.textContent = `(${rate3}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-social-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '사회 2개 선택';
+    if (row3Subtext) row3Subtext.textContent = '사회 2과목 선택';
+    if (c2El) c2El.textContent = `${count2}명`;
+    if (r2El) r2El.textContent = `(${rate2}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-social-filter', '2');
+
+    if (descBox) {
+      descBox.innerHTML = '2학년 2학기 <strong>선택 5과목</strong> 중 사회 교과(법과 사회, 윤리와 사상, 동아시아 역사 기행, 한국지리 탐구, 사회문제 탐구) 선택 인원입니다.';
+    }
+  } else if (cohortKey === '2025_3_1') {
+    // 3-1: 국제 관계의 이해, 인문학과 윤리, 도시의 미래 탐구, 기후변화와 지속가능한 세계 (4과목)
+    const count4 = info.count4.length;
+    const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '사회 4개 선택';
+    if (row1Subtext) row1Subtext.textContent = '인문 집중 (올선택)';
+    if (c4El) c4El.textContent = `${count4}명`;
+    if (r4El) r4El.textContent = `(${rate4}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-social-filter', '4');
+
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '사회 3개 선택';
+    if (row2Subtext) row2Subtext.textContent = '사회 3과목 집중';
+    if (c3El) c3El.textContent = `${count3}명`;
+    if (r3El) r3El.textContent = `(${rate3}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-social-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '사회 2개 선택';
+    if (row3Subtext) row3Subtext.textContent = '사회 2과목 선택';
+    if (c2El) c2El.textContent = `${count2}명`;
+    if (r2El) r2El.textContent = `(${rate2}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-social-filter', '2');
+
+    if (descBox) {
+      descBox.innerHTML = '3학년 1학기 <strong>선택 4과목</strong> 중 사회 교과(국제 관계의 이해, 인문학과 윤리, 도시의 미래 탐구, 기후변화와 지속가능한 세계) 선택 인원입니다.';
+    }
+  } else if (cohortKey === '2025_3_2') {
+    // 3-2: 여행지리, 윤리문제 탐구, 금융과 경제생활, 역사로 탐구하는 현대 세계 (4과목)
+    const count4 = info.count4.length;
+    const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '사회 4개 선택';
+    if (row1Subtext) row1Subtext.textContent = '인문 집중 (올선택)';
+    if (c4El) c4El.textContent = `${count4}명`;
+    if (r4El) r4El.textContent = `(${rate4}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-social-filter', '4');
+
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '사회 3개 선택';
+    if (row2Subtext) row2Subtext.textContent = '사회 3과목 집중';
+    if (c3El) c3El.textContent = `${count3}명`;
+    if (r3El) r3El.textContent = `(${rate3}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-social-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '사회 2개 선택';
+    if (row3Subtext) row3Subtext.textContent = '사회 2과목 선택';
+    if (c2El) c2El.textContent = `${count2}명`;
+    if (r2El) r2El.textContent = `(${rate2}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-social-filter', '2');
+
+    if (descBox) {
+      descBox.innerHTML = '3학년 2학기 <strong>선택 4과목</strong> 중 사회 교과(여행지리, 윤리문제 탐구, 금융과 경제생활, 역사로 탐구하는 현대 세계) 선택 인원입니다.';
+    }
+  } else {
+    // Default 2026_2_1
+    const count4 = info.count4.length;
+    const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '사회 4개 선택';
+    if (row1Subtext) row1Subtext.textContent = '인문 집중 (올선택)';
+    if (c4El) c4El.textContent = `${count4}명`;
+    if (r4El) r4El.textContent = `(${rate4}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-social-filter', '4');
+
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '사회 3개 선택';
+    if (row2Subtext) row2Subtext.textContent = '사회 3 + 과학 1';
+    if (c3El) c3El.textContent = `${count3}명`;
+    if (r3El) r3El.textContent = `(${rate3}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-social-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '사회 2개 선택';
+    if (row3Subtext) row3Subtext.textContent = '사회 2 + 과학 2 (균형)';
+    if (c2El) c2El.textContent = `${count2}명`;
+    if (r2El) r2El.textContent = `(${rate2}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-social-filter', '2');
+
+    if (descBox) {
+      descBox.innerHTML = '2학년 1학기 <strong>선택 4과목</strong> 중 사회 교과(사회와 문화, 현대사회와 윤리, 세계사, 세계시민과 지리) 선택 인원입니다.';
+    }
+  }
+}
+
+// Render Science Studies Focus Card (All Cohorts)
+function renderScienceCountsCard(cohortKey = '2026_2_1') {
+  const info = getScienceStudiesChoiceInfo(cohortKey);
+  const total = info.totalStudents;
+
+  const row1Badge = document.getElementById('science-row1-badge');
+  const row1Subtext = document.getElementById('science-row1-subtext');
+  const c4El = document.getElementById('science4-count');
+  const r4El = document.getElementById('science4-percent');
+
+  const row2Badge = document.getElementById('science-row2-badge');
+  const row2Subtext = document.getElementById('science-row2-subtext');
+  const c3El = document.getElementById('science3-count');
+  const r3El = document.getElementById('science3-percent');
+
+  const row3Badge = document.getElementById('science-row3-badge');
+  const row3Subtext = document.getElementById('science-row3-subtext');
+  const c2El = document.getElementById('science2-count');
+  const r2El = document.getElementById('science2-percent');
+
+  const descBox = document.getElementById('science-desc-box');
+  const statRows = document.querySelectorAll('#card-science-counts .science-stat-row');
+
+  if (cohortKey === '2026_2_2') {
+    // 2-2: 역학과 에너지, 화학 반응의 세계, 세포와 물질대사, 지구시스템과학, 과학과제 연구 (과학 4과목 = 과학중점과정)
+    const count4 = info.count4plus.length;
+    const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '과학 4개 선택';
+    if (row1Subtext) row1Subtext.textContent = '심화집중 (🔬 과학중점과정)';
+    if (c4El) c4El.textContent = `${count4}명`;
+    if (r4El) r4El.textContent = `(${rate4}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-science-filter', '4');
+
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '과학 3개 선택';
+    if (row2Subtext) row2Subtext.textContent = '과학 3과목 집중';
+    if (c3El) c3El.textContent = `${count3}명`;
+    if (r3El) r3El.textContent = `(${rate3}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-science-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '과학 2개 선택';
+    if (row3Subtext) row3Subtext.textContent = '과학 2과목 선택';
+    if (c2El) c2El.textContent = `${count2}명`;
+    if (r2El) r2El.textContent = `(${rate2}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-science-filter', '2');
+
+    if (descBox) {
+      descBox.innerHTML = '2학년 2학기 <strong>선택 5과목</strong> 중 과학 교과(역학과 에너지, 화학 반응의 세계, 세포와 물질대사, 지구시스템과학, 과학과제 연구) 선택 인원입니다. (4과목 = 과학중점과정)';
+    }
+  } else if (cohortKey === '2025_3_1') {
+    // 3-1: 전자기와 양자, 물질과 에너지, 생물의 유전, 행성우주과학 (4과목)
+    const count4 = info.count4.length;
+    const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '과학 4개 선택';
+    if (row1Subtext) row1Subtext.textContent = '4과목 올선택';
+    if (c4El) c4El.textContent = `${count4}명`;
+    if (r4El) r4El.textContent = `(${rate4}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-science-filter', '4');
+
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '과학 3개 선택';
+    if (row2Subtext) row2Subtext.textContent = '과학 3과목 집중';
+    if (c3El) c3El.textContent = `${count3}명`;
+    if (r3El) r3El.textContent = `(${rate3}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-science-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '과학 2개 선택';
+    if (row3Subtext) row3Subtext.textContent = '과학 2과목 선택';
+    if (c2El) c2El.textContent = `${count2}명`;
+    if (r2El) r2El.textContent = `(${rate2}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-science-filter', '2');
+
+    if (descBox) {
+      descBox.innerHTML = `3학년 1학기 <strong>선택 4과목</strong> 중 과학 교과(전자기와 양자, 물질과 에너지, 생물의 유전, 행성우주과학) 선택 인원입니다. (3~4개 집중: ${info.count3plus.length}명, ${total > 0 ? ((info.count3plus.length / total) * 100).toFixed(1) : '0.0'}%)`;
+    }
+  } else if (cohortKey === '2025_3_2') {
+    // 3-2: 과학의 역사와 문화, 기후변화와 환경생태, 융합과학 탐구 (총 3과목 개설)
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '과학 3개 선택';
+    if (row1Subtext) row1Subtext.textContent = '3과목 올선택 (자연 집중)';
+    if (c4El) c4El.textContent = `${count3}명`;
+    if (r4El) r4El.textContent = `(${rate3}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-science-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '과학 2개 선택';
+    if (row2Subtext) row2Subtext.textContent = '과학 2과목 선택';
+    if (c3El) c3El.textContent = `${count2}명`;
+    if (r3El) r3El.textContent = `(${rate2}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-science-filter', '2');
+
+    const count1 = info.count1.length;
+    const rate1 = total > 0 ? ((count1 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '과학 1개 선택';
+    if (row3Subtext) row3Subtext.textContent = '과학 1과목 선택';
+    if (c2El) c2El.textContent = `${count1}명`;
+    if (r2El) r2El.textContent = `(${rate1}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-science-filter', '1');
+
+    if (descBox) {
+      descBox.innerHTML = `3학년 2학기 개설 과학 3과목(과학의 역사와 문화, 기후변화와 환경생태, 융합과학 탐구) 선택 인원입니다. (개설 3과목 모두 이수: ${count3}명)`;
+    }
+  } else {
+    // Default 2026_2_1
+    const count4 = info.count4.length;
+    const rate4 = total > 0 ? ((count4 / total) * 100).toFixed(1) : '0.0';
+    if (row1Badge) row1Badge.textContent = '과학 4개 선택';
+    if (row1Subtext) row1Subtext.textContent = '올선택 (🔬 과학중점과정)';
+    if (c4El) c4El.textContent = `${count4}명`;
+    if (r4El) r4El.textContent = `(${rate4}%)`;
+    if (statRows[0]) statRows[0].setAttribute('data-science-filter', '4');
+
+    const count3 = info.count3.length;
+    const rate3 = total > 0 ? ((count3 / total) * 100).toFixed(1) : '0.0';
+    if (row2Badge) row2Badge.textContent = '과학 3개 선택';
+    if (row2Subtext) row2Subtext.textContent = '과학 3 + 사회 1';
+    if (c3El) c3El.textContent = `${count3}명`;
+    if (r3El) r3El.textContent = `(${rate3}%)`;
+    if (statRows[1]) statRows[1].setAttribute('data-science-filter', '3');
+
+    const count2 = info.count2.length;
+    const rate2 = total > 0 ? ((count2 / total) * 100).toFixed(1) : '0.0';
+    if (row3Badge) row3Badge.textContent = '과학 2개 선택';
+    if (row3Subtext) row3Subtext.textContent = '과학 2 + 사회 2 (균형)';
+    if (c2El) c2El.textContent = `${count2}명`;
+    if (r2El) r2El.textContent = `(${rate2}%)`;
+    if (statRows[2]) statRows[2].setAttribute('data-science-filter', '2');
+
+    if (descBox) {
+      descBox.innerHTML = '2학년 1학기 <strong>선택 4과목</strong> 중 과학 교과(물리학·화학·생명과학·지구과학) 선택 인원입니다. (4과목 = 과학중점과정)';
+    }
+  }
+}
+
+// Render Track Comparison Table Card (All Cohorts: 인문사회계열 vs 자연과학계열 vs 융합)
+function renderTrackCompareCard(cohortKey = '2026_2_1') {
+  const socInfo = getSocialStudiesChoiceInfo(cohortKey);
+  const sciInfo = getScienceStudiesChoiceInfo(cohortKey);
+  const total = socInfo.totalStudents;
+
+  // Build mapped records combining social and science counts per student
+  const studentMap = {};
+  socInfo.studentRecords.forEach(st => {
+    studentMap[st.id || `${st.grade}_${st.ban}_${st.num}`] = {
+      ...st,
+      socCount: st.socialCount,
+      sciCount: 0
+    };
+  });
+  sciInfo.studentRecords.forEach(st => {
+    const key = st.id || `${st.grade}_${st.ban}_${st.num}`;
+    if (studentMap[key]) {
+      studentMap[key].sciCount = st.scienceCount;
+    } else {
+      studentMap[key] = {
+        ...st,
+        socCount: 0,
+        sciCount: st.scienceCount
+      };
+    }
+  });
+
+  const students = Object.values(studentMap);
+  const humStudents = students.filter(s => s.socCount > s.sciCount);
+  const natStudents = students.filter(s => s.sciCount > s.socCount);
+  const balStudents = students.filter(s => s.socCount === s.sciCount && (s.socCount > 0 || s.sciCount > 0));
+
+  const humCount = humStudents.length;
+  const natCount = natStudents.length;
+  const balCount = balStudents.length;
+
+  const humRate = total > 0 ? ((humCount / total) * 100).toFixed(1) : '0.0';
+  const natRate = total > 0 ? ((natCount / total) * 100).toFixed(1) : '0.0';
+  const balRate = total > 0 ? ((balCount / total) * 100).toFixed(1) : '0.0';
+
+  // Update Ratio Bar & Percent labels
+  const trackHumanitiesTotalRate = document.getElementById('track-humanities-total-rate');
+  if (trackHumanitiesTotalRate) trackHumanitiesTotalRate.textContent = `${humRate}%`;
+
+  const trackBalancedRate = document.getElementById('track-balanced-rate');
+  if (trackBalancedRate) trackBalancedRate.textContent = `${balRate}%`;
+
+  const trackNatureTotalRate = document.getElementById('track-nature-total-rate');
+  if (trackNatureTotalRate) trackNatureTotalRate.textContent = `${natRate}%`;
+
+  const barHumanities = document.getElementById('bar-humanities-ratio');
+  if (barHumanities) barHumanities.style.width = `${humRate}%`;
+
+  const barBalanced = document.getElementById('bar-balanced-ratio');
+  if (barBalanced) barBalanced.style.width = `${balRate}%`;
+
+  const barNature = document.getElementById('bar-nature-ratio');
+  if (barNature) barNature.style.width = `${natRate}%`;
+
+  const tbody = document.getElementById('track-compare-tbody');
+  const noteEl = document.getElementById('track-compare-note');
+
+  if (!tbody) return;
+
+  if (cohortKey === '2026_2_2') {
+    const soc4plus = students.filter(s => s.socCount >= 4);
+    const soc4plusRate = total > 0 ? ((soc4plus.length / total) * 100).toFixed(1) : '0.0';
+
+    const soc3Dominant = students.filter(s => s.socCount === 3 && s.sciCount < 3);
+    const soc3DomRate = total > 0 ? ((soc3Dominant.length / total) * 100).toFixed(1) : '0.0';
+
+    const socOtherDominant = students.filter(s => s.socCount > s.sciCount && s.socCount < 3);
+    const socOtherDomRate = total > 0 ? ((socOtherDominant.length / total) * 100).toFixed(1) : '0.0';
+
+    const sci4 = students.filter(s => s.sciCount >= 4);
+    const sci4Rate = total > 0 ? ((sci4.length / total) * 100).toFixed(1) : '0.0';
+
+    const sci3Dominant = students.filter(s => s.sciCount === 3 && s.socCount < 3);
+    const sci3DomRate = total > 0 ? ((sci3Dominant.length / total) * 100).toFixed(1) : '0.0';
+
+    const sciOtherDominant = students.filter(s => s.sciCount > s.socCount && s.sciCount < 3);
+    const sciOtherDomRate = total > 0 ? ((sciOtherDominant.length / total) * 100).toFixed(1) : '0.0';
+
+    tbody.innerHTML = `
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('4plus')" title="클릭 시 사회 4~5개 선택자 명단 확인">
+        <td rowspan="3" style="padding: 4px 6px; font-weight: 700; color: #1E40AF; background: #EFF6FF; text-align: left; vertical-align: middle; border-right: 1px solid #DBEAFE;">
+          인문사회<br><span style="font-size: 0.7rem; font-weight: normal; color: #3B82F6;">(소계: ${humCount}명, ${humRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 4~5개 심화선택</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc4plus.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc4plusRate}%</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('3')" title="클릭 시 사회 3개 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 3개 집중 (사회 우세)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc3Dominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc3DomRate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openSocialModal('2')" title="클릭 시 사회 우세 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">기타 사회 우세 (사회 2+과학 1)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${socOtherDominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${socOtherDomRate}%</td>
+      </tr>
+
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openScienceMultiModal('4')" title="클릭 시 과학 4개(과학중점과정) 선택자 명단 확인">
+        <td rowspan="3" style="padding: 4px 6px; font-weight: 700; color: #9F1239; background: #FFF1F2; text-align: left; vertical-align: middle; border-right: 1px solid #FFE4E6;">
+          자연과학<br><span style="font-size: 0.7rem; font-weight: normal; color: #E11D48;">(소계: ${natCount}명, ${natRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">
+          과학 4개 <span class="badge badge-pink" style="font-size: 0.68rem; font-weight: 700; padding: 1px 4px;">🔬 과학중점과정</span>
+        </td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sci4.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sci4Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openScienceMultiModal('3')" title="클릭 시 과학 3개 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">과학 3개 집중 (과학 우세)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sci3Dominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sci3DomRate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 과학 우세 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">기타 과학 우세 (과학 2+사회 1)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sciOtherDominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sciOtherDomRate}%</td>
+      </tr>
+
+      <tr style="background: #FAF5FF; border-bottom: 1px solid #E2E8F0; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 융합(사회 2+과학 2) 선택자 명단 확인">
+        <td style="padding: 4px 6px; font-weight: 700; color: #6B21A8; text-align: left; border-right: 1px solid #F3E8FF;">융합(균형)</td>
+        <td style="padding: 3px 6px; text-align: left; color: #475569;">사회 2개 + 과학 2개</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #7E22CE;">${balCount}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${balRate}%</td>
+      </tr>
+    `;
+
+    if (noteEl) {
+      noteEl.innerHTML = '* 2학년 2학기 과학 4과목 선택자는 <strong>과학중점과정</strong>으로 분류됩니다.';
+    }
+
+  } else if (cohortKey === '2025_3_1') {
+    const soc4 = students.filter(s => s.socCount === 4);
+    const soc4Rate = total > 0 ? ((soc4.length / total) * 100).toFixed(1) : '0.0';
+
+    const soc3 = students.filter(s => s.socCount === 3);
+    const soc3Rate = total > 0 ? ((soc3.length / total) * 100).toFixed(1) : '0.0';
+
+    const socOtherDominant = students.filter(s => s.socCount > s.sciCount && s.socCount < 3);
+    const socOtherDomRate = total > 0 ? ((socOtherDominant.length / total) * 100).toFixed(1) : '0.0';
+
+    const sci3plus = students.filter(s => s.sciCount >= 3);
+    const sci3plusRate = total > 0 ? ((sci3plus.length / total) * 100).toFixed(1) : '0.0';
+
+    const sciOtherDominant = students.filter(s => s.sciCount > s.socCount && s.sciCount < 3);
+    const sciOtherDomRate = total > 0 ? ((sciOtherDominant.length / total) * 100).toFixed(1) : '0.0';
+
+    tbody.innerHTML = `
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('4')" title="클릭 시 사회 4개 선택자 명단 확인">
+        <td rowspan="3" style="padding: 4px 6px; font-weight: 700; color: #1E40AF; background: #EFF6FF; text-align: left; vertical-align: middle; border-right: 1px solid #DBEAFE;">
+          인문사회<br><span style="font-size: 0.7rem; font-weight: normal; color: #3B82F6;">(소계: ${humCount}명, ${humRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 4개 (인문집중 올선택)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc4.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc4Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('3')" title="클릭 시 사회 3개 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 3개 집중 (사회 우세)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc3.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc3Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openSocialModal('2')" title="클릭 시 기타 사회 우세 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">기타 사회 우세 선택자</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${socOtherDominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${socOtherDomRate}%</td>
+      </tr>
+
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openScienceMultiModal('3plus')" title="클릭 시 과학 3~4개 심화선택자 명단 확인">
+        <td rowspan="2" style="padding: 4px 6px; font-weight: 700; color: #9F1239; background: #FFF1F2; text-align: left; vertical-align: middle; border-right: 1px solid #FFE4E6;">
+          자연과학<br><span style="font-size: 0.7rem; font-weight: normal; color: #E11D48;">(소계: ${natCount}명, ${natRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">
+          과학 3~4개 심화 집중 이수
+        </td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sci3plus.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sci3plusRate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 과학 우세 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">과학 2개 선택 (과학 우세)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sciOtherDominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sciOtherDomRate}%</td>
+      </tr>
+
+      <tr style="background: #FAF5FF; border-bottom: 1px solid #E2E8F0; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 사회·과학 균형 이수자 명단 확인">
+        <td style="padding: 4px 6px; font-weight: 700; color: #6B21A8; text-align: left; border-right: 1px solid #F3E8FF;">융합(균형)</td>
+        <td style="padding: 3px 6px; text-align: left; color: #475569;">사회·과학 균형 이수</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #7E22CE;">${balCount}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${balRate}%</td>
+      </tr>
+    `;
+
+    if (noteEl) {
+      noteEl.innerHTML = `* 3학년 1학기 전문 과학(전자기, 물질, 유전, 우주) 3~4과목 집중 이수자는 <strong>${sci3plus.length}명(${sci3plusRate}%)</strong>입니다.`;
+    }
+
+  } else if (cohortKey === '2025_3_2') {
+    const soc4 = students.filter(s => s.socCount === 4);
+    const soc4Rate = total > 0 ? ((soc4.length / total) * 100).toFixed(1) : '0.0';
+
+    const soc3 = students.filter(s => s.socCount === 3);
+    const soc3Rate = total > 0 ? ((soc3.length / total) * 100).toFixed(1) : '0.0';
+
+    const socOtherDominant = students.filter(s => s.socCount > s.sciCount && s.socCount < 3);
+    const socOtherDomRate = total > 0 ? ((socOtherDominant.length / total) * 100).toFixed(1) : '0.0';
+
+    const sci3 = students.filter(s => s.sciCount === 3);
+    const sci3Rate = total > 0 ? ((sci3.length / total) * 100).toFixed(1) : '0.0';
+
+    const sciOtherDominant = students.filter(s => s.sciCount > s.socCount && s.sciCount < 3);
+    const sciOtherDomRate = total > 0 ? ((sciOtherDominant.length / total) * 100).toFixed(1) : '0.0';
+
+    tbody.innerHTML = `
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('4')" title="클릭 시 사회 4개 선택자 명단 확인">
+        <td rowspan="3" style="padding: 4px 6px; font-weight: 700; color: #1E40AF; background: #EFF6FF; text-align: left; vertical-align: middle; border-right: 1px solid #DBEAFE;">
+          인문사회<br><span style="font-size: 0.7rem; font-weight: normal; color: #3B82F6;">(소계: ${humCount}명, ${humRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 4개 (인문집중 올선택)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc4.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc4Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('3')" title="클릭 시 사회 3개 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 3개 집중 (사회 우세)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc3.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc3Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openSocialModal('2')" title="클릭 시 기타 사회 우세 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">기타 사회 우세 선택자</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${socOtherDominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${socOtherDomRate}%</td>
+      </tr>
+
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openScienceMultiModal('3')" title="클릭 시 과학 3개 올선택자 명단 확인">
+        <td rowspan="2" style="padding: 4px 6px; font-weight: 700; color: #9F1239; background: #FFF1F2; text-align: left; vertical-align: middle; border-right: 1px solid #FFE4E6;">
+          자연과학<br><span style="font-size: 0.7rem; font-weight: normal; color: #E11D48;">(소계: ${natCount}명, ${natRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">
+          과학 3개 올선택 (자연 집중)
+        </td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sci3.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sci3Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 과학 우세 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">과학 1~2개 선택 (과학 우세)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sciOtherDominant.length}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sciOtherDomRate}%</td>
+      </tr>
+
+      <tr style="background: #FAF5FF; border-bottom: 1px solid #E2E8F0; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 사회·과학 균형 이수자 명단 확인">
+        <td style="padding: 4px 6px; font-weight: 700; color: #6B21A8; text-align: left; border-right: 1px solid #F3E8FF;">융합(균형)</td>
+        <td style="padding: 3px 6px; text-align: left; color: #475569;">사회·과학 균형 이수</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #7E22CE;">${balCount}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${balRate}%</td>
+      </tr>
+    `;
+
+    if (noteEl) {
+      noteEl.innerHTML = `* 3학년 2학기 개설 과학 3과목(과학사, 기후생태, 융합과학) 올선택자는 <strong>${sci3.length}명(${sci3Rate}%)</strong>입니다.`;
+    }
+
+  } else {
+    // Default 2026_2_1
+    const soc4 = socInfo.count4.length;
+    const soc3 = socInfo.count3.length;
+    const soc4Rate = total > 0 ? ((soc4 / total) * 100).toFixed(1) : '0.0';
+    const soc3Rate = total > 0 ? ((soc3 / total) * 100).toFixed(1) : '0.0';
+
+    const sci4 = sciInfo.count4.length;
+    const sci3 = sciInfo.count3.length;
+    const sci4Rate = total > 0 ? ((sci4 / total) * 100).toFixed(1) : '0.0';
+    const sci3Rate = total > 0 ? ((sci3 / total) * 100).toFixed(1) : '0.0';
+
+    tbody.innerHTML = `
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openSocialModal('4')" title="클릭 시 사회 4개(인문집중) 선택자 명단 확인">
+        <td rowspan="2" style="padding: 4px 6px; font-weight: 700; color: #1E40AF; background: #EFF6FF; text-align: left; vertical-align: middle; border-right: 1px solid #DBEAFE;">
+          인문사회<br><span style="font-size: 0.7rem; font-weight: normal; color: #3B82F6;">(소계: ${humCount}명, ${humRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 4개 (인문집중)</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc4}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc4Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openSocialModal('3')" title="클릭 시 사회 3개 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">사회 3개 + 과학 1개</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #1D4ED8;">${soc3}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${soc3Rate}%</td>
+      </tr>
+
+      <tr style="border-bottom: 1px solid #F1F5F9; cursor: pointer;" onclick="openScienceMultiModal('4')" title="클릭 시 과학 4개(과학중점과정) 선택자 명단 확인">
+        <td rowspan="2" style="padding: 4px 6px; font-weight: 700; color: #9F1239; background: #FFF1F2; text-align: left; vertical-align: middle; border-right: 1px solid #FFE4E6;">
+          자연과학<br><span style="font-size: 0.7rem; font-weight: normal; color: #E11D48;">(소계: ${natCount}명, ${natRate}%)</span>
+        </td>
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">
+          과학 4개 <span class="badge badge-pink" style="font-size: 0.68rem; font-weight: 700; padding: 1px 4px;">🔬 과학중점과정</span>
+        </td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sci4}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sci4Rate}%</td>
+      </tr>
+      <tr style="border-bottom: 1.5px solid #CBD5E1; cursor: pointer;" onclick="openScienceMultiModal('3')" title="클릭 시 과학 3개 선택자 명단 확인">
+        <td style="padding: 3px 6px; text-align: left; color: #334155;">과학 3개 + 사회 1개</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #BE123C;">${sci3}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${sci3Rate}%</td>
+      </tr>
+
+      <tr style="background: #FAF5FF; border-bottom: 1px solid #E2E8F0; cursor: pointer;" onclick="openScienceMultiModal('2')" title="클릭 시 사회 2개 + 과학 2개(융합·균형) 선택자 명단 확인">
+        <td style="padding: 4px 6px; font-weight: 700; color: #6B21A8; text-align: left; border-right: 1px solid #F3E8FF;">융합(균형)</td>
+        <td style="padding: 3px 6px; text-align: left; color: #475569;">사회 2개 + 과학 2개</td>
+        <td style="padding: 3px 6px; font-weight: 700; color: #7E22CE;">${balCount}명</td>
+        <td style="padding: 3px 6px; color: #64748B;">${balRate}%</td>
+      </tr>
+    `;
+
+    if (noteEl) {
+      noteEl.innerHTML = '* 과학 4과목 선택자는 <strong>과학중점과정</strong>으로 분류됩니다.';
+    }
+  }
 }
 
 // Render Horizontal Bar Chart
@@ -2560,26 +3253,37 @@ function openSocialModal(filterCount = 'all') {
   // Update modal title
   const titleEl = document.getElementById('modal-social-title');
   if (titleEl) {
-    const cohortName = state.data[cohortKey]?.name || '2026 입학생 (2학년 1학기)';
+    const cohortName = state.data[cohortKey]?.name || '정명고등학교';
     titleEl.textContent = `${cohortName} - 사회 교과 선택 학생 명단`;
   }
 
-  // Update tabs labels with counts
-  const tabAll = document.getElementById('tab-social-all');
-  const tab4 = document.getElementById('tab-social-4');
-  const tab3 = document.getElementById('tab-social-3');
-  const tab2 = document.getElementById('tab-social-2');
-
-  const allTargetStudents = [...info.count4, ...info.count3, ...info.count2];
-  if (tabAll) tabAll.textContent = `전체 (총 ${allTargetStudents.length}명)`;
-  if (tab4) tab4.textContent = `사회 4개 (${info.count4.length}명)`;
-  if (tab3) tab3.textContent = `사회 3개 (${info.count3.length}명)`;
-  if (tab2) tab2.textContent = `사회 2개 (${info.count2.length}명)`;
-
-  // Set active filter button
-  document.querySelectorAll('#modal-social-filters .pill-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-social-tab') === currentSocialFilter);
-  });
+  // Update tabs dynamically per cohort
+  const filtersContainer = document.getElementById('modal-social-filters');
+  if (filtersContainer) {
+    if (cohortKey === '2026_2_2') {
+      const allCount = info.count4plus.length + info.count3.length + info.count2.length;
+      filtersContainer.innerHTML = `
+        <button type="button" class="pill-btn ${currentSocialFilter === 'all' ? 'active' : ''}" data-social-tab="all">전체 (${allCount}명)</button>
+        <button type="button" class="pill-btn ${currentSocialFilter === '4plus' || currentSocialFilter === '4' ? 'active' : ''}" data-social-tab="4plus">사회 4~5개 (${info.count4plus.length}명)</button>
+        <button type="button" class="pill-btn ${currentSocialFilter === '3' ? 'active' : ''}" data-social-tab="3">사회 3개 (${info.count3.length}명)</button>
+        <button type="button" class="pill-btn ${currentSocialFilter === '2' ? 'active' : ''}" data-social-tab="2">사회 2개 (${info.count2.length}명)</button>
+      `;
+    } else {
+      const allCount = info.count4.length + info.count3.length + info.count2.length;
+      filtersContainer.innerHTML = `
+        <button type="button" class="pill-btn ${currentSocialFilter === 'all' ? 'active' : ''}" data-social-tab="all">전체 (${allCount}명)</button>
+        <button type="button" class="pill-btn ${currentSocialFilter === '4' ? 'active' : ''}" data-social-tab="4">사회 4개 (${info.count4.length}명)</button>
+        <button type="button" class="pill-btn ${currentSocialFilter === '3' ? 'active' : ''}" data-social-tab="3">사회 3개 (${info.count3.length}명)</button>
+        <button type="button" class="pill-btn ${currentSocialFilter === '2' ? 'active' : ''}" data-social-tab="2">사회 2개 (${info.count2.length}명)</button>
+      `;
+    }
+    filtersContainer.querySelectorAll('.pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-social-tab') || 'all';
+        openSocialModal(tab);
+      });
+    });
+  }
 
   renderSocialModalTable(info, currentSocialFilter);
 
@@ -2594,14 +3298,18 @@ function renderSocialModalTable(info, filterCount) {
   tbody.innerHTML = '';
 
   let list = [];
-  if (filterCount === '4') {
-    list = [...info.count4];
+  if (filterCount === '5') {
+    list = info.studentRecords.filter(st => st.socialCount === 5);
+  } else if (filterCount === '4') {
+    list = info.studentRecords.filter(st => st.socialCount === 4);
+  } else if (filterCount === '4plus') {
+    list = info.studentRecords.filter(st => st.socialCount >= 4);
   } else if (filterCount === '3') {
-    list = [...info.count3];
+    list = info.studentRecords.filter(st => st.socialCount === 3);
   } else if (filterCount === '2') {
-    list = [...info.count2];
+    list = info.studentRecords.filter(st => st.socialCount === 2);
   } else {
-    list = [...info.count4, ...info.count3, ...info.count2];
+    list = info.studentRecords.filter(st => st.socialCount >= 2);
   }
 
   // Sort by ban asc, num asc
@@ -2625,8 +3333,17 @@ function renderSocialModalTable(info, filterCount) {
     const nameTag = st.name ? ` <span style="font-size:0.8rem; color:#64748B; font-weight:normal;">(${st.name})</span>` : '';
     
     let badgeClass = 'badge-blue';
-    if (st.socialCount === 3) badgeClass = 'badge-green';
-    if (st.socialCount === 2) badgeClass = 'badge-purple';
+    let badgeText = `사회 ${st.socialCount}개`;
+    if (st.socialCount >= 4) {
+      badgeClass = 'badge-blue';
+      badgeText = `사회 ${st.socialCount}개 (인문집중)`;
+    } else if (st.socialCount === 3) {
+      badgeClass = 'badge-green';
+      badgeText = '사회 3개';
+    } else if (st.socialCount === 2) {
+      badgeClass = 'badge-purple';
+      badgeText = '사회 2개';
+    }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -2635,7 +3352,7 @@ function renderSocialModalTable(info, filterCount) {
       <td style="text-align:center; font-weight:700; color:#334155;">${st.ban}반</td>
       <td style="text-align:center; font-weight:700; color:#334155;">${st.num}번${nameTag}</td>
       <td style="text-align:center;">
-        <span class="badge ${badgeClass}" style="font-size:0.78rem; font-weight:700;">사회 ${st.socialCount}개</span>
+        <span class="badge ${badgeClass}" style="font-size:0.78rem; font-weight:700;">${badgeText}</span>
       </td>
       <td>
         <div style="display:flex; flex-wrap:wrap; gap:4px;">
@@ -2651,6 +3368,155 @@ function renderSocialModalTable(info, filterCount) {
     tbody.appendChild(tr);
   });
 }
+
+let currentScienceFilter = 'all';
+
+function openScienceMultiModal(filterCount = 'all') {
+  currentScienceFilter = String(filterCount);
+  const cohortKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
+  const info = getScienceStudiesChoiceInfo(cohortKey);
+
+  // Update modal title
+  const titleEl = document.getElementById('modal-science-multi-title');
+  if (titleEl) {
+    const cohortName = state.data[cohortKey]?.name || '정명고등학교';
+    titleEl.textContent = `${cohortName} - 과학 교과 선택 학생 명단`;
+  }
+
+  // Update tabs dynamically per cohort
+  const filtersContainer = document.getElementById('modal-science-multi-filters');
+  if (filtersContainer) {
+    if (cohortKey === '2025_3_2') {
+      const allCount = info.count3.length + info.count2.length + info.count1.length;
+      filtersContainer.innerHTML = `
+        <button type="button" class="pill-btn ${currentScienceFilter === 'all' ? 'active' : ''}" data-science-tab="all">전체 (${allCount}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '3' ? 'active' : ''}" data-science-tab="3">과학 3개 올선택 (${info.count3.length}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '2' ? 'active' : ''}" data-science-tab="2">과학 2개 (${info.count2.length}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '1' ? 'active' : ''}" data-science-tab="1">과학 1개 (${info.count1.length}명)</button>
+      `;
+    } else if (cohortKey === '2025_3_1') {
+      const allCount = info.count4.length + info.count3.length + info.count2.length;
+      filtersContainer.innerHTML = `
+        <button type="button" class="pill-btn ${currentScienceFilter === 'all' ? 'active' : ''}" data-science-tab="all">전체 (${allCount}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '3plus' || currentScienceFilter === '4' ? 'active' : ''}" data-science-tab="3plus">과학 3~4개 집중 (${info.count3plus.length}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '3' ? 'active' : ''}" data-science-tab="3">과학 3개 (${info.count3.length}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '2' ? 'active' : ''}" data-science-tab="2">과학 2개 (${info.count2.length}명)</button>
+      `;
+    } else {
+      // 2026_2_1, 2026_2_2 (과학 4개 = 과학중점과정)
+      const c4 = (cohortKey === '2026_2_2') ? info.count4plus.length : info.count4.length;
+      const allCount = c4 + info.count3.length + info.count2.length;
+      filtersContainer.innerHTML = `
+        <button type="button" class="pill-btn ${currentScienceFilter === 'all' ? 'active' : ''}" data-science-tab="all">전체 (${allCount}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '4' || currentScienceFilter === '4plus' ? 'active' : ''}" data-science-tab="4">과학 4개 (🔬 과학중점) (${c4}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '3' ? 'active' : ''}" data-science-tab="3">과학 3개 (${info.count3.length}명)</button>
+        <button type="button" class="pill-btn ${currentScienceFilter === '2' ? 'active' : ''}" data-science-tab="2">과학 2개 (${info.count2.length}명)</button>
+      `;
+    }
+
+    filtersContainer.querySelectorAll('.pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-science-tab') || 'all';
+        openScienceMultiModal(tab);
+      });
+    });
+  }
+
+  renderScienceMultiModalTable(info, currentScienceFilter);
+
+  const modal = document.getElementById('modal-science-multi');
+  if (modal) modal.classList.add('active');
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function renderScienceMultiModalTable(info, filterCount) {
+  const tbody = document.getElementById('modal-science-multi-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  let list = [];
+  if (filterCount === '4' || filterCount === '4plus') {
+    list = info.studentRecords.filter(st => st.scienceCount >= 4);
+  } else if (filterCount === '3plus') {
+    list = info.studentRecords.filter(st => st.scienceCount >= 3);
+  } else if (filterCount === '3') {
+    list = info.studentRecords.filter(st => st.scienceCount === 3);
+  } else if (filterCount === '2') {
+    list = info.studentRecords.filter(st => st.scienceCount === 2);
+  } else if (filterCount === '1') {
+    list = info.studentRecords.filter(st => st.scienceCount === 1);
+  } else {
+    list = info.studentRecords.filter(st => st.scienceCount >= (info.cohortKey === '2025_3_2' ? 1 : 2));
+  }
+
+  // Sort by ban asc, num asc
+  list.sort((a, b) => {
+    const banA = parseInt(a.ban, 10) || 0;
+    const banB = parseInt(b.ban, 10) || 0;
+    if (banA !== banB) return banA - banB;
+    const numA = parseInt(a.num, 10) || 0;
+    const numB = parseInt(b.num, 10) || 0;
+    return numA - numB;
+  });
+
+  if (list.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="7" style="text-align:center; padding:24px; color:#94A3B8;">선택 학생이 없습니다.</td>`;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  list.forEach((st, idx) => {
+    const nameTag = st.name ? ` <span style="font-size:0.8rem; color:#64748B; font-weight:normal;">(${st.name})</span>` : '';
+
+    let badgeHtml = '';
+    if ((info.cohortKey === '2026_2_1' || info.cohortKey === '2026_2_2') && st.scienceCount >= 4) {
+      badgeHtml = `<span class="badge badge-pink" style="font-size:0.76rem; font-weight:700;">과학 ${st.scienceCount}개 (🔬 과학중점)</span>`;
+    } else if (st.scienceCount >= 4) {
+      badgeHtml = `<span class="badge badge-pink" style="font-size:0.76rem; font-weight:700;">과학 ${st.scienceCount}개</span>`;
+    } else if (st.scienceCount === 3) {
+      badgeHtml = `<span class="badge badge-amber" style="font-size:0.76rem; font-weight:700;">과학 3개</span>`;
+    } else if (st.scienceCount === 2) {
+      badgeHtml = `<span class="badge badge-purple" style="font-size:0.76rem; font-weight:700;">과학 2개</span>`;
+    } else if (st.scienceCount === 1) {
+      badgeHtml = `<span class="badge badge-blue" style="font-size:0.76rem; font-weight:700;">과학 1개</span>`;
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="text-align:center; color:#64748B; font-weight:600;">${idx + 1}</td>
+      <td style="text-align:center; font-weight:600;">${st.grade || '2'}</td>
+      <td style="text-align:center; font-weight:700; color:#334155;">${st.ban}반</td>
+      <td style="text-align:center; font-weight:700; color:#334155;">${st.num}번${nameTag}</td>
+      <td style="text-align:center;">
+        ${badgeHtml}
+      </td>
+      <td>
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+          ${(st.scienceChoices || []).map(c => `<span class="badge badge-pink" style="font-size:0.8rem;">${c}</span>`).join(' ')}
+        </div>
+      </td>
+      <td>
+        ${(st.otherChoices && st.otherChoices.length > 0)
+          ? `<div style="display:flex; flex-wrap:wrap; gap:4px;">${st.otherChoices.map(c => `<span class="badge badge-gray" style="font-size:0.75rem;">${c}</span>`).join(' ')}</div>`
+          : '<span style="color:#CBD5E1; font-size:0.8rem;">-</span>'}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.openSocialModal = openSocialModal;
+window.openScienceMultiModal = openScienceMultiModal;
+
+function openWelcomeModal() {
+  const modal = document.getElementById('modal-welcome');
+  if (modal) {
+    modal.classList.add('active');
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+window.openWelcomeModal = openWelcomeModal;
 
 function setupModalClosers() {
   document.querySelectorAll('[data-close]').forEach(btn => {
@@ -3642,18 +4508,25 @@ function exportSocialListToExcel() {
   const info = getSocialStudiesChoiceInfo(cohortKey);
 
   let list = [];
-  let filterLabel = '전체(4·3·2개)';
-  if (currentSocialFilter === '4') {
-    list = [...info.count4];
+  let filterLabel = '전체';
+  if (currentSocialFilter === '5') {
+    list = info.studentRecords.filter(st => st.socialCount === 5);
+    filterLabel = '사회 5개 선택자';
+  } else if (currentSocialFilter === '4') {
+    list = info.studentRecords.filter(st => st.socialCount === 4);
     filterLabel = '사회 4개 선택자';
+  } else if (currentSocialFilter === '4plus') {
+    list = info.studentRecords.filter(st => st.socialCount >= 4);
+    filterLabel = '사회 4~5개 선택자';
   } else if (currentSocialFilter === '3') {
-    list = [...info.count3];
+    list = info.studentRecords.filter(st => st.socialCount === 3);
     filterLabel = '사회 3개 선택자';
   } else if (currentSocialFilter === '2') {
-    list = [...info.count2];
+    list = info.studentRecords.filter(st => st.socialCount === 2);
     filterLabel = '사회 2개 선택자';
   } else {
-    list = [...info.count4, ...info.count3, ...info.count2];
+    list = info.studentRecords.filter(st => st.socialCount >= 2);
+    filterLabel = '사회 2개이상 전체';
   }
 
   list.sort((a, b) => {
@@ -3686,6 +4559,72 @@ function exportSocialListToExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '사회선택자');
   XLSX.writeFile(wb, `정명고_${cohortKey}_사회교과선택자_${filterLabel}_${list.length}명.xlsx`);
+}
+
+function exportScienceMultiListToExcel() {
+  const cohortKey = state.activeTab.startsWith('202') ? state.activeTab : '2026_2_1';
+  const info = getScienceStudiesChoiceInfo(cohortKey);
+
+  let list = [];
+  let filterLabel = '전체';
+  if (currentScienceFilter === '4' || currentScienceFilter === '4plus') {
+    list = info.studentRecords.filter(st => st.scienceCount >= 4);
+    filterLabel = (cohortKey === '2026_2_1' || cohortKey === '2026_2_2') ? '과학 4개(과학중점) 선택자' : '과학 4개 선택자';
+  } else if (currentScienceFilter === '3plus') {
+    list = info.studentRecords.filter(st => st.scienceCount >= 3);
+    filterLabel = '과학 3~4개 집중선택자';
+  } else if (currentScienceFilter === '3') {
+    list = info.studentRecords.filter(st => st.scienceCount === 3);
+    filterLabel = '과학 3개 선택자';
+  } else if (currentScienceFilter === '2') {
+    list = info.studentRecords.filter(st => st.scienceCount === 2);
+    filterLabel = '과학 2개 선택자';
+  } else if (currentScienceFilter === '1') {
+    list = info.studentRecords.filter(st => st.scienceCount === 1);
+    filterLabel = '과학 1개 선택자';
+  } else {
+    list = info.studentRecords.filter(st => st.scienceCount >= (cohortKey === '2025_3_2' ? 1 : 2));
+    filterLabel = '과학선택자 전체';
+  }
+
+  list.sort((a, b) => {
+    const banA = parseInt(a.ban, 10) || 0;
+    const banB = parseInt(b.ban, 10) || 0;
+    if (banA !== banB) return banA - banB;
+    const numA = parseInt(a.num, 10) || 0;
+    const numB = parseInt(b.num, 10) || 0;
+    return numA - numB;
+  });
+
+  const exportData = [
+    ['연번', '학년', '반', '번호', '이름', '과학 선택 구분', '과학 선택 과목 수', '선택한 과학 교과목', '기타 선택 과목']
+  ];
+
+  list.forEach((st, idx) => {
+    let trackLabel = `과학 ${st.scienceCount}개 선택`;
+    if ((cohortKey === '2026_2_1' || cohortKey === '2026_2_2') && st.scienceCount >= 4) {
+      trackLabel = '과학중점과정 (4과목 올선택)';
+    } else if (cohortKey === '2025_3_2' && st.scienceCount === 3) {
+      trackLabel = '개설 과학 3과목 올선택';
+    }
+
+    exportData.push([
+      idx + 1,
+      st.grade || '2',
+      st.ban,
+      st.num,
+      st.name || '',
+      trackLabel,
+      `과학 ${st.scienceCount}개`,
+      (st.scienceChoices || []).join(', '),
+      (st.otherChoices || []).join(', ')
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '과학교과선택자');
+  XLSX.writeFile(wb, `정명고_${cohortKey}_과학교과선택자_${filterLabel}_${list.length}명.xlsx`);
 }
 
 function exportCoSelectionMatrixToExcel() {
@@ -4694,6 +5633,7 @@ function parseSchoolExcelSheet(sheetName, sheetIndex, jsonRows) {
 // -------------------------------------------------------------
 function handleFileUpload(file) {
   if (!file) return;
+  document.getElementById('modal-welcome')?.classList.remove('active');
   const reader = new FileReader();
 
   reader.onload = function(e) {
@@ -4985,6 +5925,26 @@ function setupEventListeners() {
     });
   });
 
+  // 9-C. Science Studies Choice Status Listeners
+  const btnScienceMulti = document.getElementById('btn-view-science-multi-students');
+  if (btnScienceMulti) {
+    btnScienceMulti.addEventListener('click', () => openScienceMultiModal('all'));
+  }
+
+  document.querySelectorAll('.science-stat-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const filter = row.getAttribute('data-science-filter') || 'all';
+      openScienceMultiModal(filter);
+    });
+  });
+
+  document.querySelectorAll('#modal-science-multi-filters .pill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.getAttribute('data-science-tab') || 'all';
+      openScienceMultiModal(filter);
+    });
+  });
+
   // 10. Load Sample Data Button
   const btnLoadSample = document.getElementById('btn-load-sample');
   if (btnLoadSample) {
@@ -5047,10 +6007,48 @@ function setupEventListeners() {
     });
   }
 
+  // Welcome Modal Listeners
+  document.getElementById('btn-welcome-download-template')?.addEventListener('click', downloadExcelTemplate);
+  const btnWelcomeBrowse = document.getElementById('btn-welcome-browse');
+  if (btnWelcomeBrowse && fileInput) {
+    btnWelcomeBrowse.addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+  const welcomeDropZone = document.getElementById('welcome-drop-zone');
+  if (welcomeDropZone && fileInput) {
+    welcomeDropZone.addEventListener('click', (e) => {
+      if (e.target !== btnWelcomeBrowse && !btnWelcomeBrowse.contains(e.target)) {
+        fileInput.click();
+      }
+    });
+    welcomeDropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      welcomeDropZone.classList.add('dragover');
+    });
+    welcomeDropZone.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      welcomeDropZone.classList.remove('dragover');
+    });
+    welcomeDropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      welcomeDropZone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        document.getElementById('modal-welcome')?.classList.remove('active');
+        handleFileUpload(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
   // 12. Export Buttons
   document.getElementById('btn-export-excel')?.addEventListener('click', downloadExcelTemplate);
   document.getElementById('btn-export-sci4-excel')?.addEventListener('click', export4ScienceListToExcel);
   document.getElementById('btn-export-social-excel')?.addEventListener('click', exportSocialListToExcel);
+  document.getElementById('btn-export-science-multi-excel')?.addEventListener('click', exportScienceMultiListToExcel);
   document.getElementById('btn-export-matrix')?.addEventListener('click', exportCoSelectionMatrixToExcel);
   document.getElementById('btn-export-master-excel')?.addEventListener('click', exportMasterSummaryToExcel);
   document.getElementById('btn-export-master-pdf')?.addEventListener('click', () => {
@@ -5130,5 +6128,6 @@ document.addEventListener('DOMContentLoaded', () => {
   generateRealisticSampleData();
   setupEventListeners();
   renderDashboard();
+  openWelcomeModal();
   console.log('정명고 공식 교육과정 분석 대시보드가 정상적으로 초기화되었습니다.');
 });

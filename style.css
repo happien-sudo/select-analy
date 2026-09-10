@@ -545,16 +545,78 @@ body {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
 }
 
+/* Science Multi-choice Focus Card (2026 2-1) */
+.science-middle-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-left: 4px solid #FDA4AF;
+}
+
+.science-middle-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.science-stat-row {
+  cursor: pointer;
+  background: #FFF1F2;
+  border: 1px solid #FECDD3;
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+}
+
+.science-stat-row:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+}
+
+/* Track Compare Card (2026 2-1) */
+.track-compare-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-left: 4px solid #A5B4FC;
+}
+
+.track-compare-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.track-compare-body tbody tr {
+  transition: all 0.15s ease;
+}
+
+.track-compare-body tbody tr:hover {
+  filter: brightness(0.96);
+}
+
 /* Charts & Section Grid */
 .charts-grid {
   display: grid;
-  grid-template-columns: 1.25fr 0.95fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 20px;
+  align-items: stretch;
 }
 
 .charts-grid .dashboard-card {
   padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 290px;
+  box-sizing: border-box;
 }
 
 .charts-grid .card-title {
@@ -562,14 +624,14 @@ body {
 }
 
 .charts-grid.hide-sci4 {
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 @media (max-width: 1100px) {
   .charts-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .sci4-middle-card, .social-middle-card {
+  .sci4-middle-card, .social-middle-card, .science-middle-card, .track-compare-card {
     grid-column: span 2;
   }
 }
@@ -578,7 +640,7 @@ body {
   .charts-grid, .charts-grid.hide-sci4 {
     grid-template-columns: 1fr;
   }
-  .sci4-middle-card, .social-middle-card {
+  .sci4-middle-card, .social-middle-card, .science-middle-card, .track-compare-card {
     grid-column: span 1;
   }
 }
@@ -915,6 +977,52 @@ body {
   0% { transform: scale(0.95); opacity: 0.8; }
   50% { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* Welcome Modal Styles */
+#welcome-drop-zone {
+  border: 2px dashed #6366F1;
+  background: #F8FAFC;
+  border-radius: 14px;
+  padding: 22px 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+#welcome-drop-zone:hover, #welcome-drop-zone.dragover {
+  border-color: #4F46E5 !important;
+  background: #EEF2FF !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.18);
+}
+
+.welcome-template-card {
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 22px 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.welcome-template-card:hover {
+  border-color: #10B981;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.18);
+}
+
+@media (max-width: 640px) {
+  .welcome-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 /* Table Section Divider Rows (학교 지정 과목 & 학생 선택 과목 구분) */
